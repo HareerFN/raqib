@@ -21,12 +21,23 @@ recovered without causing new harm.
     raqib/         the repair agent (next step)
     results/       benchmark outputs (JSON)
 
-## Harness validation
+## Using an LLM
 
-| Agent  | Dev | Validation | Held-out |
-|--------|-----|------------|----------|
-| Null   | 0%  | 0%         | 0%       |
-| Oracle | 100% | 100%      | 100%     |
+Copy `.env.example` to `.env` and paste your OpenRouter key. Then:
+
+    python run_benchmark.py --split dev --agent llm_single_shot --seeds 1
+
+Model answers are cached in `.llm_cache/` (keyed by a hash of the request).
+Re-running replays the cache: identical results, zero cost. Commit the cache so
+anyone can reproduce the reported numbers without an API key.
+
+## Results so far (success rate, 3 seeds each)
+
+| Agent | Dev | Validation | Held-out |
+|-------|-----|------------|----------|
+| Null (does nothing) | 0% | 0% | 0% |
+| Oracle (knows the answer) | 100% | 100% | 100% |
+| Rule-based runbooks | 100% | 60% | sealed |
 
 Null proves failures do not heal on their own. Oracle (reads the ground truth)
 proves every fixable scenario can really be fixed with the available actions.

@@ -344,8 +344,9 @@ class TargetSystem:
             self.db_pool_in_use = DB_POOL_BASELINE
         if service == "worker":
             self.db.execute("UPDATE messages SET state='pending' WHERE state='in_flight'")
+        cleared = self.faults.clear_origin(f"transient:{service}")  # a process stuck in a bad state
         self._audit("restart_service", service=service)
-        return {"ok": True, "service": service, "connections_released": released}
+        return {"ok": True, "service": service, "connections_released": released, "_cleared": cleared}
 
     def rollback_service(self, service: str) -> dict:
         stack = self._versions.get(service, [])

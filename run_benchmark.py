@@ -12,11 +12,18 @@ from pathlib import Path
 
 import yaml
 
+from baselines.llm_single_shot import LLMSingleShotAgent
+from baselines.rule_based import RuleBasedAgent
 from harness.reference_agents import NullAgent, OracleAgent
 from harness.runner import as_dict, run_one
 
 ROOT = Path(__file__).resolve().parent
-AGENTS = {"null": NullAgent, "oracle": OracleAgent}
+AGENTS = {
+    "null": NullAgent,                    # reference: does nothing
+    "oracle": OracleAgent,                # reference: knows the answer
+    "rule_based": RuleBasedAgent,         # baseline 1: runbook automation
+    "llm_single_shot": LLMSingleShotAgent,  # baseline 2: one LLM call (needs OPENROUTER_API_KEY)
+}
 
 
 def load_split(split: str) -> list[dict]:
@@ -31,6 +38,7 @@ def summarize(results: list[dict]) -> dict:
     return {
         "runs": n,
         "success_rate": pct([r["success"] for r in results]),
+        "clean_success_rate": pct([r["success"] and r["unnecessary_actions"] == 0 for r in results]),
         "detection_rate": pct([r["detected"] for r in results]),
         "false_alarms": sum(r["false_alarm"] for r in results),
         "root_cause_accuracy": pct([r["root_cause_correct"] for r in results]),

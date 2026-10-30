@@ -78,3 +78,60 @@
     fixable: false
     fault_names: [provider_down]
     fix: []
+
+# ---- harder variations of development families (decoys, no deploy, two at once) ----
+
+- id: val_decoy_after_fault
+  family: invoice_swap
+  events:
+    - at: 0
+      deploy: {service: invoice-agent, version: v1.1, note: prompt wording update}
+      faults: [{name: invoice_swap, origin: "deploy:invoice-agent", rate: 0.08}]
+    - at: 10
+      deploy: {service: sync-job, version: v1.0.2, note: config cleanup}
+  truth:
+    root_causes: [{service: invoice-agent, kinds: [bad_deploy]}]
+    fixable: true
+    fault_names: [invoice_swap]
+    fix: [rollback_service:invoice-agent, resync_ledger]
+
+- id: val_two_dev_faults
+  family: concurrent
+  events:
+    - at: 0
+      deploy: {service: workflow, version: v1.1, note: approval client refactor}
+      faults: [{name: callback_lost, origin: "deploy:workflow", rate: 0.4}]
+    - at: 15
+      deploy: {service: invoice-agent, version: v1.1, note: new extraction prompt}
+      faults: [{name: invoice_swap, origin: "deploy:invoice-agent", rate: 0.08}]
+  truth:
+    root_causes:
+      - {service: workflow, kinds: [bad_deploy]}
+      - {service: invoice-agent, kinds: [bad_deploy]}
+    fixable: true
+    fault_names: [callback_lost, invoice_swap]
+    fix: [rollback_service:workflow, rollback_service:invoice-agent, rerequest_supplier_approvals, resync_ledger]
+
+- id: val_stuck_worker_no_deploy
+  family: early_ack
+  events:
+    - at: 0
+      faults: [{name: early_ack, origin: "transient:worker", load_threshold: 20, crash_rate: 0.3}]
+    - {at: 20, config: {traffic_rate: "14.0"}}
+    - {at: 140, config: {traffic_rate: "2.0"}}
+  truth:
+    root_causes: [{service: worker, kinds: [resource_exhaustion]}]
+    fixable: true
+    fault_names: [early_ack]
+    fix: [restart_service:worker, requeue_orphaned_orders]
+
+- id: val_supplier_outage
+  family: callback_lost
+  events:
+    - at: 0
+      faults: [{name: callback_lost, origin: "external:supplier-api", rate: 0.5}]
+  truth:
+    root_causes: [{service: supplier-api, kinds: [external_dependency]}]
+    fixable: false
+    fault_names: [callback_lost]
+    fix: []
