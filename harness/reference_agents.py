@@ -55,4 +55,4 @@ class OracleAgent:
                 env.act(action, **({"service": service} if service else {}))
         if not self.truth["fixable"]:
             env.escalate("oracle: cannot be fixed from inside the system")
-        env.finish()
+        env.finish(recovered=self.truth["fixable"])

@@ -45,6 +45,7 @@ def summarize(results: list[dict]) -> dict:
     n = len(results)
     fixable = [r for r in results if r["fixable"]]
     pct = lambda xs: round(100 * sum(xs) / len(xs), 1) if xs else None  # noqa: E731
+    pct_of = lambda a, b: round(100 * a / b, 1) if b else None  # noqa: E731
     mean = lambda xs: round(sum(xs) / len(xs), 1) if xs else None  # noqa: E731
     return {
         "runs": n,
@@ -60,6 +61,13 @@ def summarize(results: list[dict]) -> dict:
         "mean_mttd_s": mean([r["mttd"] for r in results if r["mttd"] is not None]),
         "mean_mttr_s": mean([r["mttr"] for r in results if r["mttr"] is not None]),
         "cost_usd": round(sum(r["cost_usd"] for r in results), 4),
+        # proof metrics
+        "evidence_cited": sum(r["evidence_cited"] for r in results),
+        "evidence_validity": pct_of(sum(r["evidence_valid"] for r in results),
+                                    sum(r["evidence_cited"] for r in results)),
+        "recovery_claims": sum(r["recovery_claim"] is not None for r in results),
+        "false_recovery_claims": sum(r["false_recovery_claim"] for r in results),
+        "false_failure_claims": sum(r["false_failure_claim"] for r in results),
     }
 
 

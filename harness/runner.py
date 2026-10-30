@@ -12,6 +12,7 @@ from dataclasses import asdict, dataclass, field
 from raqib.invariants import RuleEngine
 from target.system import TargetSystem
 
+from . import citations
 from .env import BudgetExhausted, Env
 
 WARMUP = 300
@@ -42,6 +43,13 @@ class RunResult:
     actions: list = field(default_factory=list)
     diagnosis: list = field(default_factory=list)
     final_violations: list = field(default_factory=list)
+    stable: bool = False                       # harness verdict after the stability window
+    recovery_claim: bool | None = None         # the agent's own verdict (None = no claim)
+    false_recovery_claim: bool = False         # claimed recovered, harness says not
+    false_failure_claim: bool = False          # claimed not recovered, harness says fine
+    evidence_cited: int = 0
+    evidence_valid: int = 0
+    invalid_evidence: list = field(default_factory=list)
     cost_usd: float = 0.0
     llm_calls: int = 0
     success: bool = False
@@ -124,16 +132,27 @@ def run_one(scenario: dict, split: str, agent_factory, seed: int, budget: int = 
         if a["action"] in ("rollback_service", "restart_service") and svc not in truth_services:
             res.unnecessary_actions += 1
 
+    # stability check (every run): invariants clean, queue drained, internal faults cleared
+    second_half = samples[len(samples) // 2:]
+    invariants_ok = all(not v for v, _ in second_half)
+    depths = [d for _, d in second_half]
+    queue_ok = depths[-1] <= 50 and depths[-1] - depths[0] <= 5
+    faults_cleared = not any(system.faults.active(n) for n in truth["fault_names"])
+    res.stable = invariants_ok and queue_ok and faults_cleared
+
     # recovery (fixable scenarios only)
     if truth["fixable"]:
-        second_half = samples[len(samples) // 2:]
-        invariants_ok = all(not v for v, _ in second_half)
-        depths = [d for _, d in second_half]
-        queue_ok = depths[-1] <= 50 and depths[-1] - depths[0] <= 5
-        faults_cleared = not any(system.faults.active(n) for n in truth["fault_names"])
-        res.recovered = invariants_ok and queue_ok and faults_cleared
+        res.recovered = res.stable
         if res.recovered and res.actions:
             res.mttr = res.actions[-1]["ts"]
+
+    # proof metrics: does the agent's own verdict match the harness, is its evidence real
+    res.recovery_claim = env.recovered_claim
+    res.false_recovery_claim = env.recovered_claim is True and not res.stable
+    res.false_failure_claim = env.recovered_claim is False and res.stable
+    cites = citations.check(env.trace)
+    res.evidence_cited, res.evidence_valid = cites["cited"], cites["valid"]
+    res.invalid_evidence = cites["invalid"]
 
     res.escalated = env.escalated
     res.escalation_correct = env.escalated == (not truth["fixable"])

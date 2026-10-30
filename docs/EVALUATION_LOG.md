@@ -91,3 +91,43 @@ outage. LLM single-shot handles the decoy deploy better than runbooks (2 of 3).
 Rule-based by number of faults: one fault 52% / 40%, two or three faults 0% / 0%.
 Runbooks that scored 100% on the hand-written dev set fail most generated cases: transient
 origins (no deploy to roll back), decoy deploys, and every concurrent fault.
+
+## 2026-10-31 · Proof infrastructure: call ids, evidence validity, recovery claims, anti-cheat
+Added before the repair agent exists, so the agent is built against these checks.
+- Env: every trace entry gets a stable id (T1, T2, ...). Evidence tools store their result
+  with the id. `env.call(tool, **args)` returns `{"id", "result"}`. The old tool methods still
+  return the same values, so existing agents are unchanged.
+- **evidence_validity** (`harness/citations.py`): a cited item is valid only if its id is a
+  real evidence-tool call made before the diagnosis, and that call's stored result supports
+  it (`match`: a record has those field values or passes `{op: value}`; `quote`: the text is in
+  the result). Bare ids, invented ids, later calls and false claims count as invalid.
+- **false_recovery_claims**: `env.finish(recovered=...)` records the agent's own verdict. The
+  runner now computes the stability check (`stable`) for every run, not just fixable ones.
+  Claimed recovered but not stable = false recovery claim. Claimed not recovered but stable =
+  false failure claim. Scoring of success is unchanged.
+- Baselines now state a verdict: rule_based claims recovery when its monitor is quiet after a
+  runbook, and failure when it escalates. llm_single_shot does not verify, so it claims
+  recovery unless it escalated. The Oracle claims `fixable`.
+- `tests/test_no_cheating.py`:
+  - Static AST scan of `raqib/` and `baselines/`. It bans private attributes off anything but
+    `self`, `.faults`, `.trace`, `__dict__`, truth keys, the `scenario` object, imports of
+    target / runner / reference_agents / generator / citations, reflection (`vars`, `inspect`,
+    computed `getattr`, ...), and paths to scenario files.
+  - Runtime check: agents run against a guarded Env that fails on any non-public access.
+  - Leak test: agent code, prompts and the config text agents see (actions, topology,
+    invariants) contain no scenario ids, fault names, mechanism names (also with spaces or
+    hyphens), injected texts or per-scenario fix steps.
+  - Every check is also run on planted cheats, so none is vacuous.
+- Proof that nothing else changed: the 180-run fingerprint (dev, validation, hand-written
+  held-out with null/oracle) is identical apart from the new fields. The only differences are
+  the 3 Oracle runs whose timing changed in Step A.
+
+New metric, existing baseline (3 seeds):
+| Agent | Split | false_recovery_claims | false_failure_claims |
+|-------|-------|-----------------------|----------------------|
+| Rule-based | validation (10) | 6 / 30 | 0 |
+| Rule-based | gen-dev (60) | 57 / 180 | 0 |
+| Rule-based | gen-validation (60) | 63 / 180 | 0 |
+
+A quiet monitor right after a runbook is not proof of recovery: in about a third of generated
+runs, rule_based says "recovered" while the harness finds the system still broken.

@@ -53,7 +53,7 @@ class LLMSingleShotAgent:
             plan = parse_json(reply)
         except (ValueError, json.JSONDecodeError):
             env.escalate("could not parse model reply")
-            env.finish()
+            env.finish(recovered=False)
             return
         env.report_diagnosis(plan.get("root_causes", []), plan.get("summary", ""))
         for step in plan.get("actions", []):
@@ -68,4 +68,5 @@ class LLMSingleShotAgent:
                 continue
         if plan.get("escalate"):
             env.escalate(plan.get("summary", ""))
-        env.finish()
+        # no verification step: it assumes its plan worked unless it escalated
+        env.finish(recovered=not plan.get("escalate"))

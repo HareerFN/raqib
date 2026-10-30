@@ -3,6 +3,10 @@
 Agents get this object and nothing else: read-only evidence tools (invariants,
 metrics, logs, deploy history, topology, read-only SQL) and the repair actions.
 They never see the fault switches or the scenario's ground truth.
+
+Every call is recorded in `trace` with a stable id (T1, T2, ...). Evidence tools also
+store their result, so a diagnosis that cites "T7" can be checked against what T7
+really returned. `call(tool, **args)` returns {"id", "result"} for agents that cite.
 """
 
 from pathlib import Path
@@ -35,6 +39,9 @@ class Env:
         self.escalated = False
         self.approved: set[str] = set()
         self.done = False
+        self.recovered_claim: bool | None = None   # the agent's own final verdict
+        self.report: dict = {}
+        self.last_call_id: str | None = None
 
     # ------------------------------------------------------------ time
     def now(self) -> int:
@@ -51,24 +58,38 @@ class Env:
             self._scheduler(self._sys)
             self._sys.step()
 
-    def _record(self, kind: str, **data):
-        self.trace.append({"ts": self.now(), "kind": kind, **data})
+    def _record(self, kind: str, **data) -> str:
+        call_id = f"T{len(self.trace) + 1}"
+        self.trace.append({"id": call_id, "ts": self.now(), "kind": kind, **data})
+        self.last_call_id = call_id
+        return call_id
+
+    def _tool(self, name: str, result, **args):
+        self._record("tool", name=name, args=args, result=result)
+        return result
+
+    TOOLS = ("invariants", "metrics", "logs", "deploys", "topology", "sql")
+
+    def call(self, tool: str, **args) -> dict:
+        """Run an evidence tool and get its call id with the result: {"id": "T7", "result": ...}."""
+        if tool not in self.TOOLS:
+            raise ValueError(f"unknown tool {tool}")
+        result = getattr(self, tool)(**args)
+        return {"id": self.last_call_id, "result": result}
 
     # ------------------------------------------------------------ evidence (read-only)
     def invariants(self) -> list[dict]:
         res = self._rules.check(self._sys.db, self.now())
-        self._record("tool", name="invariants")
-        return [{"id": r.id, "description": r.description, "services": r.services, "violations": r.violations}
-                for r in res]
+        return self._tool("invariants", [{"id": r.id, "description": r.description, "services": list(r.services),
+                                          "violations": r.violations} for r in res])
 
     def metrics(self, last_seconds: int = 300) -> list[dict]:
-        self._record("tool", name="metrics")
         cutoff = self.now() - last_seconds
-        return [s for s in self._sys.metrics.series if s["ts"] >= cutoff]
+        return self._tool("metrics", [dict(s) for s in self._sys.metrics.series if s["ts"] >= cutoff],
+                          last_seconds=last_seconds)
 
     def logs(self, service: str | None = None, level: str | None = None,
              contains: str | None = None, since: int | None = None, limit: int = 50) -> list[dict]:
-        self._record("tool", name="logs", service=service, level=level, contains=contains)
         out = []
         for r in reversed(self._sys.log.records):
             if since is not None and r["ts"] < since:
@@ -82,22 +103,22 @@ class Env:
             out.append(r)
             if len(out) >= limit:
                 break
-        return list(reversed(out))
+        return self._tool("logs", [dict(r) for r in reversed(out)], service=service, level=level,
+                          contains=contains, since=since, limit=limit)
 
     def deploys(self) -> list[dict]:
-        self._record("tool", name="deploys")
-        return [dict(r) for r in self._sys.db.execute("SELECT ts, service, version, note FROM deploys ORDER BY id")]
+        rows = self._sys.db.execute("SELECT ts, service, version, note FROM deploys ORDER BY id")
+        return self._tool("deploys", [dict(r) for r in rows])
 
     def topology(self) -> dict:
-        return TOPOLOGY
+        return self._tool("topology", TOPOLOGY)
 
     def sql(self, query: str, limit: int = 50) -> list[dict]:
         q = query.strip().lower()
         if not q.startswith("select") or any(w in q for w in (" insert ", " update ", " delete ", " drop ", ";")):
             raise ValueError("read-only SELECT queries only")
-        self._record("tool", name="sql", query=query)
         rows = self._sys.db.execute(query, {"now": self.now()}).fetchmany(limit)
-        return [dict(r) for r in rows]
+        return self._tool("sql", [dict(r) for r in rows], query=query, limit=limit)
 
     def actions(self) -> dict:
         return ACTIONS
@@ -108,9 +129,11 @@ class Env:
             self.incident_at = self.now()
         self._record("incident", summary=summary)
 
-    def report_diagnosis(self, root_causes: list[dict], summary: str, evidence: list[str] | None = None):
+    def report_diagnosis(self, root_causes: list[dict], summary: str, evidence: list[dict] | None = None):
         """root_causes: [{"service": ..., "kind": ...}] with kind in
-        bad_deploy | config_change | resource_exhaustion | runtime_fault | external_dependency | bad_input."""
+        bad_deploy | config_change | resource_exhaustion | runtime_fault | external_dependency | bad_input.
+        evidence: cited items {"id": "T7", "claim": "...", "match": {field: value | {op: value}}}
+        and/or "quote": "<text found in that result>". Scoring checks each item against the trace."""
         self.diagnosis = root_causes
         self.summary = summary
         self._record("diagnosis", root_causes=root_causes, summary=summary, evidence=evidence or [])
@@ -138,6 +161,9 @@ class Env:
         self.escalated = True
         self._record("escalation", summary=summary)
 
-    def finish(self):
+    def finish(self, recovered: bool | None = None, report: dict | None = None):
+        """End the incident. recovered: the agent's own claim that the system is healthy again."""
         self.done = True
-        self._record("finish")
+        self.recovered_claim = recovered
+        self.report = report or {}
+        self._record("finish", recovered=recovered, report=self.report)

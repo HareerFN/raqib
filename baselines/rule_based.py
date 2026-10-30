@@ -44,7 +44,7 @@ class RuleBasedAgent:
                     env.report_diagnosis([{"service": "payment-provider", "kind": "external_dependency"}],
                                          "payment failures: provider outage runbook")
                     env.escalate("payment provider failing")
-                    env.finish()
+                    env.finish(recovered=False)
                     return
 
                 # runbook: roll back the most recent deploy of an implicated service
@@ -74,11 +74,11 @@ class RuleBasedAgent:
                 rounds += 1
                 env.wait(90)
                 if not monitor.check():
-                    env.finish()
+                    env.finish(recovered=True)       # runbook done and the monitor is quiet
                     return
                 if rounds >= 2:
                     env.escalate("runbooks did not resolve: " + ", ".join(sorted(ids)))
-                    env.finish()
+                    env.finish(recovered=False)
                     return
         except BudgetExhausted:
             return
