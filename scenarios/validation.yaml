@@ -1,0 +1,80 @@
+# VALIDATION scenarios: same failure families as development, new parameters and decoys.
+# Used to check whether a change to the agent really helped.
+
+- id: val_payment_swallow
+  family: payment_swallow
+  events:
+    - at: -45
+      deploy: {service: worker, version: v1.0.1, note: bump base image}
+    - at: 0
+      deploy: {service: payment-service, version: v1.1, note: simplify webhook handler}
+      faults: [{name: payment_swallow, origin: "deploy:payment-service", rate: 0.1}]
+  truth:
+    root_causes: [{service: payment-service, kinds: [bad_deploy]}]
+    fixable: true
+    fault_names: [payment_swallow]
+    fix: [rollback_service:payment-service, replay_payment_confirmations]
+
+- id: val_queue_early_ack
+  family: early_ack
+  events:
+    - at: 0
+      deploy: {service: worker, version: v1.1, note: faster message acknowledgement}
+      faults: [{name: early_ack, origin: "deploy:worker", load_threshold: 25, crash_rate: 0.25}]
+    - {at: 90, config: {traffic_rate: "16.0"}}
+    - {at: 180, config: {traffic_rate: "2.0"}}
+  truth:
+    root_causes: [{service: worker, kinds: [bad_deploy]}]
+    fixable: true
+    fault_names: [early_ack]
+    fix: [rollback_service:worker, requeue_orphaned_orders]
+
+- id: val_invoice_swap
+  family: invoice_swap
+  events:
+    - at: 0
+      deploy: {service: invoice-agent, version: v1.1, note: switch extraction model}
+      faults: [{name: invoice_swap, origin: "deploy:invoice-agent", rate: 0.03}]
+  truth:
+    root_causes: [{service: invoice-agent, kinds: [bad_deploy]}]
+    fixable: true
+    fault_names: [invoice_swap]
+    fix: [rollback_service:invoice-agent, resync_ledger]
+
+- id: val_callback_lost
+  family: callback_lost
+  events:
+    - at: -30
+      deploy: {service: sync-job, version: v1.0.1, note: logging format update}
+    - at: 0
+      deploy: {service: workflow, version: v1.1, note: new approval routing}
+      faults: [{name: callback_lost, origin: "deploy:workflow", rate: 0.25}]
+  truth:
+    root_causes: [{service: workflow, kinds: [bad_deploy]}]
+    fixable: true
+    fault_names: [callback_lost]
+    fix: [rollback_service:workflow, rerequest_supplier_approvals]
+
+- id: val_retry_loop
+  family: agent_retry_loop
+  events:
+    - at: 0
+      deploy: {service: worker, version: v1.1, note: retry tuning}
+      faults: [{name: agent_retry_loop, origin: "deploy:worker", supplier: Red Sea Parts}]
+  truth:
+    root_causes: [{service: worker, kinds: [bad_deploy]}]
+    fixable: true
+    fault_names: [agent_retry_loop]
+    fix: [rollback_service:worker, requeue_orphaned_orders]
+
+- id: val_provider_down
+  family: provider_down
+  events:
+    - {at: -20, config: {traffic_rate: "5.0"}}
+    - at: 0
+      faults: [{name: provider_down, origin: "external:payment-provider"}]
+  truth:
+    root_causes: [{service: payment-provider, kinds: [external_dependency]}]
+    fixable: false
+    fault_names: [provider_down]
+    fix: []

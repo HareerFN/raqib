@@ -1,0 +1,78 @@
+# DEVELOPMENT scenarios: used freely while building the agent.
+# Times in `events.at` are seconds after the (random, hidden) fault onset.
+# `truth` is for scoring only. Agents never see it.
+
+- id: dev_payment_swallow
+  family: payment_swallow
+  events:
+    - at: 0
+      deploy: {service: payment-service, version: v1.1, note: refactor webhook error handling}
+      faults: [{name: payment_swallow, origin: "deploy:payment-service", rate: 0.2}]
+  truth:
+    root_causes: [{service: payment-service, kinds: [bad_deploy]}]
+    fixable: true
+    fault_names: [payment_swallow]
+    fix: [rollback_service:payment-service, replay_payment_confirmations]
+
+- id: dev_queue_early_ack
+  family: early_ack
+  events:
+    - at: 0
+      deploy: {service: worker, version: v1.1, note: acknowledge messages on receipt for throughput}
+      faults: [{name: early_ack, origin: "deploy:worker", load_threshold: 20, crash_rate: 0.3}]
+    - {at: 30, config: {traffic_rate: "14.0"}}
+    - {at: 150, config: {traffic_rate: "2.0"}}
+  truth:
+    root_causes: [{service: worker, kinds: [bad_deploy]}]
+    fixable: true
+    fault_names: [early_ack]
+    fix: [rollback_service:worker, requeue_orphaned_orders]
+
+- id: dev_invoice_swap
+  family: invoice_swap
+  events:
+    - at: 0
+      deploy: {service: invoice-agent, version: v1.1, note: new extraction prompt}
+      faults: [{name: invoice_swap, origin: "deploy:invoice-agent", rate: 0.08}]
+  truth:
+    root_causes: [{service: invoice-agent, kinds: [bad_deploy]}]
+    fixable: true
+    fault_names: [invoice_swap]
+    fix: [rollback_service:invoice-agent, resync_ledger]
+
+- id: dev_callback_lost
+  family: callback_lost
+  events:
+    - at: 0
+      deploy: {service: workflow, version: v1.1, note: migrate supplier callback endpoint}
+      faults: [{name: callback_lost, origin: "deploy:workflow", rate: 0.4}]
+  truth:
+    root_causes: [{service: workflow, kinds: [bad_deploy]}]
+    fixable: true
+    fault_names: [callback_lost]
+    fix: [rollback_service:workflow, rerequest_supplier_approvals]
+
+- id: dev_retry_loop
+  family: agent_retry_loop
+  events:
+    - at: 0
+      deploy: {service: worker, version: v1.1, note: new invoice layout handling}
+      faults: [{name: agent_retry_loop, origin: "deploy:worker", supplier: Najd Logistics}]
+  truth:
+    root_causes: [{service: worker, kinds: [bad_deploy]}]
+    fixable: true
+    fault_names: [agent_retry_loop]
+    fix: [rollback_service:worker, requeue_orphaned_orders]
+
+- id: dev_provider_down
+  family: provider_down
+  events:
+    - at: -60
+      deploy: {service: payment-service, version: v1.0.1, note: update dependency versions}
+    - at: 0
+      faults: [{name: provider_down, origin: "external:payment-provider"}]
+  truth:
+    root_causes: [{service: payment-provider, kinds: [external_dependency]}]
+    fixable: false
+    fault_names: [provider_down]
+    fix: []

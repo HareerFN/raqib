@@ -1,0 +1,14 @@
+# Dependency graph: "A depends on B" means a failure in B can show up as symptoms in A.
+# The agent uses this to tell a root cause from its symptoms.
+
+services:
+  order-service:   {depends_on: [database]}
+  queue:           {depends_on: [database]}
+  worker:          {depends_on: [queue, invoice-agent, payment-service, database]}
+  invoice-agent:   {depends_on: []}
+  payment-service: {depends_on: [payment-provider, database]}
+  payment-provider: {depends_on: [], external: true}
+  workflow:        {depends_on: [supplier-api, database]}
+  supplier-api:    {depends_on: [], external: true}
+  sync-job:        {depends_on: [database]}
+  database:        {depends_on: []}

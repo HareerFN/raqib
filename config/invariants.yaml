@@ -1,0 +1,56 @@
+# Business invariants: what "the system is doing its job" means.
+# Each query counts violations. A healthy system returns 0 (or passes the check).
+# These are written per system, not per failure: the agent never sees the failure list.
+
+- id: I1_payment_has_order
+  description: Every captured payment has a confirmed order within 2 minutes
+  services: [payment-service, order-service]
+  query: |
+    SELECT COUNT(*) FROM payments p JOIN orders o ON o.id = p.order_id
+    WHERE p.status = 'captured' AND o.status NOT IN ('paid', 'fulfilled')
+      AND p.updated_at < :now - 120
+
+- id: I2_no_orphaned_orders
+  description: Every new order is picked up for processing within 2 minutes
+  services: [worker, queue]
+  query: |
+    SELECT COUNT(*) FROM orders o
+    WHERE o.status = 'created' AND o.created_at < :now - 120
+      AND NOT EXISTS (SELECT 1 FROM messages m WHERE m.order_id = o.id
+                      AND m.state IN ('pending', 'in_flight'))
+
+- id: I3_ledger_integrity
+  description: Ledger rows respect VAT = 15% of amount and total = amount + VAT
+  services: [invoice-agent, sync-job]
+  query: |
+    SELECT COUNT(*) FROM ledger
+    WHERE ABS(vat - ROUND(amount * 0.15, 2)) > 0.02
+       OR ABS(total - (amount + vat)) > 0.02
+
+- id: I4_workflow_progress
+  description: No paid order waits for supplier approval longer than 5 minutes
+  services: [workflow]
+  query: |
+    SELECT COUNT(*) FROM orders o JOIN approvals a ON a.order_id = o.id
+    WHERE o.status = 'paid' AND a.resolved_at IS NULL AND a.requested_at < :now - 300
+
+- id: I5_single_payment
+  description: Each order is charged at most once
+  services: [payment-service]
+  query: |
+    SELECT COUNT(*) FROM (SELECT order_id FROM payments WHERE status = 'captured'
+                          GROUP BY order_id HAVING COUNT(*) > 1)
+
+- id: I6_retry_budget
+  description: No task is retried beyond its retry budget
+  services: [worker, invoice-agent]
+  query: |
+    SELECT COUNT(*) FROM messages WHERE attempts > 5 AND state IN ('pending', 'in_flight')
+
+- id: I7_payments_succeed
+  description: Payment failures stay under 5% of attempts in the last 5 minutes
+  services: [payment-service]
+  query: |
+    SELECT CASE WHEN COUNT(*) < 10 THEN 0
+                ELSE (SUM(status = 'failed') * 100 / COUNT(*) > 5) END
+    FROM payments WHERE created_at > :now - 300
