@@ -110,7 +110,7 @@ class Env:
 
     def report_diagnosis(self, root_causes: list[dict], summary: str, evidence: list[str] | None = None):
         """root_causes: [{"service": ..., "kind": ...}] with kind in
-        bad_deploy | config_change | resource_exhaustion | external_dependency | bad_input."""
+        bad_deploy | config_change | resource_exhaustion | runtime_fault | external_dependency | bad_input."""
         self.diagnosis = root_causes
         self.summary = summary
         self._record("diagnosis", root_causes=root_causes, summary=summary, evidence=evidence or [])

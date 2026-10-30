@@ -120,7 +120,7 @@
     - {at: 20, config: {traffic_rate: "14.0"}}
     - {at: 140, config: {traffic_rate: "2.0"}}
   truth:
-    root_causes: [{service: worker, kinds: [resource_exhaustion]}]
+    root_causes: [{service: worker, kinds: [runtime_fault, resource_exhaustion]}]
     fixable: true
     fault_names: [early_ack]
     fix: [restart_service:worker, requeue_orphaned_orders]

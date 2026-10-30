@@ -5,7 +5,7 @@ Kept short on purpose: every line costs tokens, so only what helps a diagnosis g
 
 import json
 
-KINDS = "bad_deploy | config_change | resource_exhaustion | external_dependency | bad_input"
+KINDS = "bad_deploy | config_change | resource_exhaustion | runtime_fault | external_dependency | bad_input"
 
 
 def _fmt_log(r: dict) -> str:
