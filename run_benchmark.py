@@ -3,6 +3,8 @@
   python run_benchmark.py --split dev --agent oracle
   python run_benchmark.py --split validation --agent null --seeds 1 2 3
   python run_benchmark.py --split heldout --agent raqib --final   # sealed set, final evaluation only
+  python run_benchmark.py --split gen-dev --agent rule_based --n 60
+Generated splits (gen-*) are read from scenarios/gen_*.yaml, written by harness/generator.py.
 """
 
 import argparse
@@ -15,6 +17,8 @@ import yaml
 from baselines.llm_single_shot import LLMSingleShotAgent
 from baselines.rule_based import RuleBasedAgent
 from harness.reference_agents import NullAgent, OracleAgent
+from harness.generator import SPLITS as GEN_SPLITS
+from harness.generator import scenario_file
 from harness.runner import as_dict, run_one
 
 ROOT = Path(__file__).resolve().parent
@@ -26,8 +30,15 @@ AGENTS = {
 }
 
 
-def load_split(split: str) -> list[dict]:
-    return yaml.safe_load((ROOT / "scenarios" / f"{split}.yaml").read_text(encoding="utf-8"))
+SEALED = ("heldout", "gen-heldout")
+
+
+def load_split(split: str, n: int | None = None) -> list[dict]:
+    path = scenario_file(split) if split in GEN_SPLITS else ROOT / "scenarios" / f"{split}.yaml"
+    if not path.exists():
+        raise SystemExit(f"{path.name} not found: run python -m harness.generator --split {split}")
+    scenarios = yaml.safe_load(path.read_text(encoding="utf-8"))
+    return scenarios[:n] if n else scenarios
 
 
 def summarize(results: list[dict]) -> dict:
@@ -54,23 +65,24 @@ def summarize(results: list[dict]) -> dict:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--split", default="dev", choices=["dev", "validation", "heldout"])
+    ap.add_argument("--split", default="dev", choices=["dev", "validation", "heldout", *GEN_SPLITS])
     ap.add_argument("--agent", default="null", choices=sorted(AGENTS))
     ap.add_argument("--seeds", type=int, nargs="+", default=[1, 2, 3])
-    ap.add_argument("--final", action="store_true", help="required to run the sealed held-out set")
+    ap.add_argument("--n", type=int, default=None, help="generated splits: use the first n scenarios")
+    ap.add_argument("--final", action="store_true", help="required to run a sealed held-out set")
     args = ap.parse_args()
 
-    if args.split == "heldout" and not args.final and args.agent not in ("null", "oracle"):
-        raise SystemExit("held-out is sealed: add --final only for the final evaluation")
+    if args.split in SEALED and not args.final and args.agent not in ("null", "oracle"):
+        raise SystemExit(f"{args.split} is sealed: add --final only for the final evaluation")
 
-    scenarios = load_split(args.split)
+    scenarios = load_split(args.split, args.n)
     results, t0 = [], time.time()
     for sc in scenarios:
         for seed in args.seeds:
             r = as_dict(run_one(sc, args.split, AGENTS[args.agent], seed))
             results.append(r)
             mark = "PASS" if r["success"] else "fail"
-            print(f"{mark}  {sc['id']:<28} seed={seed}  detected={r['detected']!s:<5} "
+            print(f"{mark}  {sc['id']:<28} {sc['family'][:40]:<40} seed={seed}  detected={r['detected']!s:<5} "
                   f"cause={r['root_cause_correct']!s:<5} recovered={r['recovered']!s:<5} "
                   f"escalated={r['escalated']!s:<5} harm={r['harmful_actions']}")
 

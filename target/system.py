@@ -30,6 +30,8 @@ CREATE TABLE ledger   (order_id TEXT PRIMARY KEY, amount REAL, vat REAL, total R
 CREATE TABLE approvals(order_id TEXT PRIMARY KEY, requested_at INT, callback_due INT, resolved_at INT);
 CREATE TABLE deploys  (id INTEGER PRIMARY KEY, ts INT, service TEXT, version TEXT, note TEXT);
 CREATE TABLE config   (key TEXT PRIMARY KEY, value TEXT);
+CREATE TABLE db_sessions (service TEXT PRIMARY KEY, open INT);
+CREATE TABLE storage  (service TEXT PRIMARY KEY, used_mb REAL, quota_mb REAL);
 """
 
 DEFAULT_CONFIG = {
@@ -46,6 +48,10 @@ SERVICES = ["order-service", "worker", "invoice-agent", "payment-service", "work
 VAT_RATE = 0.15
 DB_POOL_SIZE = 50
 DB_POOL_BASELINE = 5
+# baseline connections and disk use per service (connections add up to DB_POOL_BASELINE)
+DB_SESSIONS = {"order-service": 1, "worker": 1, "payment-service": 1, "workflow": 1, "sync-job": 1}
+DISK_QUOTA_MB = 1000.0
+DISK_BASE_MB = {"order-service": 40.0, "worker": 60.0, "payment-service": 30.0, "workflow": 30.0, "sync-job": 40.0}
 
 
 class DatabaseTimeout(Exception):
@@ -64,7 +70,12 @@ class TargetSystem:
         self.db.executescript(SCHEMA)
         for k, v in DEFAULT_CONFIG.items():
             self.db.execute("INSERT INTO config VALUES (?, ?)", (k, v))
-        self.db_pool_in_use = DB_POOL_BASELINE
+        self.db_held: dict[str, int] = {}        # connections leaked, per service
+        self.disk_extra: dict[str, float] = {}   # disk filled beyond baseline, per service
+        for svc, n in DB_SESSIONS.items():
+            self.db.execute("INSERT INTO db_sessions VALUES (?, ?)", (svc, n))
+        for svc, mb in DISK_BASE_MB.items():
+            self.db.execute("INSERT INTO storage VALUES (?, ?, ?)", (svc, mb, DISK_QUOTA_MB))
         self._webhooks: list[tuple[int, int]] = []          # (due_ts, payment_id)
         self._versions: dict[str, list[tuple[str, dict]]] = {}  # service -> [(version, config_before)]
         self._order_seq = 0
@@ -85,6 +96,40 @@ class TargetSystem:
     def _set_status(self, order_id: str, status: str):
         self.db.execute("UPDATE orders SET status=?, updated_at=? WHERE id=?",
                         (status, self.clock.now, order_id))
+
+    @property
+    def db_pool_in_use(self) -> int:
+        return min(DB_POOL_SIZE, DB_POOL_BASELINE + sum(self.db_held.values()))
+
+    def _leak(self, service: str, n: int):
+        room = DB_POOL_SIZE - self.db_pool_in_use
+        if room > 0 and n > 0:
+            self.db_held[service] = self.db_held.get(service, 0) + min(n, room)
+            self.db.execute("UPDATE db_sessions SET open=? WHERE service=?",
+                            (DB_SESSIONS.get(service, 0) + self.db_held[service], service))
+
+    def _release(self, service: str) -> int:
+        n = self.db_held.pop(service, 0)
+        if n:
+            self.db.execute("UPDATE db_sessions SET open=? WHERE service=?", (DB_SESSIONS.get(service, 0), service))
+        return n
+
+    def _leaks_from(self, service: str) -> bool:
+        """A connection leak in `service` (sync-job when the fault names no service)."""
+        return self.faults.active("conn_leak") and \
+            self.faults.params("conn_leak").get("service", "sync-job") == service
+
+    @property
+    def disk_full(self) -> bool:
+        return sum(DISK_BASE_MB.values()) + sum(self.disk_extra.values()) >= DISK_QUOTA_MB
+
+    def _fill_disk(self):
+        p = self.faults.params("disk_fill")
+        svc = p.get("service", "sync-job")
+        self.disk_extra[svc] = self.disk_extra.get(svc, 0.0) + p.get("mb_per_min", 300) / 60
+        if self.clock.now % 10 == 0:
+            self.db.execute("UPDATE storage SET used_mb=? WHERE service=?",
+                            (round(DISK_BASE_MB.get(svc, 0) + self.disk_extra[svc], 1), svc))
 
     def _db_check(self, service: str):
         """Raise a timeout when the connection pool is nearly exhausted."""
@@ -107,6 +152,8 @@ class TargetSystem:
     # ================================================================ main loop
     def step(self):
         self.clock.tick()
+        if self.faults.active("disk_fill"):
+            self._fill_disk()
         self._traffic()
         self._deliver_webhooks()
         self._supplier_callbacks()
@@ -182,6 +229,10 @@ class TargetSystem:
 
         try:
             self._db_check("worker")
+            if self._leaks_from("worker") and self.rng.random() < self.faults.params("conn_leak").get("per_event", 0.1):
+                self._leak("worker", 1)
+            if self.disk_full:
+                raise OSError("disk quota exceeded: cannot write invoice file")
             order = self.db.execute("SELECT * FROM orders WHERE id=?", (m["order_id"],)).fetchone()
             inv = self._invoice_agent(order)
             self.db.execute("INSERT OR REPLACE INTO invoices VALUES (?,?,?,?,?)",
@@ -222,7 +273,8 @@ class TargetSystem:
             inv = self.parse_invoice(order["invoice_text"])
         except AttributeError as exc:
             raise ValueError("extraction failed: required field not found") from exc
-        if self.faults.active("invoice_swap"):
+        if self.faults.active("invoice_swap") and \
+                self.faults.params("invoice_swap").get("service", "invoice-agent") == "invoice-agent":
             if self.rng.random() < self.faults.params("invoice_swap").get("rate", 0.05):
                 inv["amount"], inv["vat"] = inv["vat"], inv["amount"]  # silent mis-extraction
         self.metrics.inc("invoices_extracted")
@@ -271,6 +323,9 @@ class TargetSystem:
             self._webhooks.append((now + 5, payment_id))  # provider retries later
             self._err("payment-service", "webhook handling failed", payment_id=payment_id, error=str(exc))
             return
+        if self._leaks_from("payment-service") and \
+                self.rng.random() < self.faults.params("conn_leak").get("per_event", 0.1):
+            self._leak("payment-service", 1)
         p = self.db.execute("SELECT * FROM payments WHERE id=?", (payment_id,)).fetchone()
         self.db.execute("UPDATE payments SET status='captured', updated_at=? WHERE id=?", (now, payment_id))
         self.metrics.inc("payments_captured")
@@ -287,7 +342,10 @@ class TargetSystem:
             return
         self._set_status(order_id, "paid")
         due = None if self._callback_lost() else self.clock.now + self.rng.randint(5, 30)
-        self.db.execute("INSERT OR IGNORE INTO approvals VALUES (?,?,?,NULL)", (order_id, self.clock.now, due))
+        stamped = self.clock.now
+        if self.faults.active("clock_skew"):
+            stamped -= int(self.faults.params("clock_skew").get("skew", 600))
+        self.db.execute("INSERT OR IGNORE INTO approvals VALUES (?,?,?,NULL)", (order_id, stamped, due))
 
     # ================================================================ approvals
     def _callback_lost(self) -> bool:
@@ -305,20 +363,27 @@ class TargetSystem:
 
     # ================================================================ accounting sync
     def _sync_job(self):
-        if self.faults.active("conn_leak"):
-            self.db_pool_in_use = min(DB_POOL_SIZE, self.db_pool_in_use + self.faults.params("conn_leak").get("per_run", 6))
+        if self._leaks_from("sync-job"):
+            self._leak("sync-job", self.faults.params("conn_leak").get("per_run", 6))
         try:
             self._db_check("sync-job")
         except DatabaseTimeout as exc:
             self._err("sync-job", "sync failed", error=str(exc))
             return
+        if self.disk_full:
+            self._err("sync-job", "sync failed", error="disk quota exceeded: cannot write ledger export")
+            return
+        swap = self.faults.active("invoice_swap") and self.faults.params("invoice_swap").get("service") == "sync-job"
         rows = self.db.execute(
             "SELECT i.* FROM invoices i JOIN orders o ON o.id=i.order_id "
             "LEFT JOIN ledger l ON l.order_id=i.order_id "
             "WHERE o.status IN ('paid','fulfilled') AND l.order_id IS NULL").fetchall()
         for r in rows:
+            amount, vat = r["amount"], r["vat"]
+            if swap and self.rng.random() < self.faults.params("invoice_swap").get("rate", 0.05):
+                amount, vat = vat, amount          # silent corruption while copying
             self.db.execute("INSERT INTO ledger VALUES (?,?,?,?,?)",
-                            (r["order_id"], r["amount"], r["vat"], r["total"], self.clock.now))
+                            (r["order_id"], amount, vat, r["total"], self.clock.now))
         self.metrics.inc("ledger_rows_synced", len(rows))
         self.log.info("sync-job", "sync completed", rows=len(rows))
 
@@ -338,10 +403,12 @@ class TargetSystem:
         self.log.info("ops", "action executed", action=action, **f)
 
     def restart_service(self, service: str) -> dict:
-        released = 0
-        if service in ("sync-job", "database"):
-            released = self.db_pool_in_use - DB_POOL_BASELINE
-            self.db_pool_in_use = DB_POOL_BASELINE
+        if service == "database":
+            released = sum(self._release(s) for s in list(self.db_held))
+        else:
+            released = self._release(service)
+        if self.disk_extra.pop(service, 0):        # logs rotated on restart
+            self.db.execute("UPDATE storage SET used_mb=? WHERE service=?", (DISK_BASE_MB.get(service, 0), service))
         if service == "worker":
             self.db.execute("UPDATE messages SET state='pending' WHERE state='in_flight'")
         cleared = self.faults.clear_origin(f"transient:{service}")  # a process stuck in a bad state

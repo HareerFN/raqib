@@ -26,10 +26,13 @@ class OracleAgent:
     def __init__(self, scenario, onset, **_):
         self.truth = scenario["truth"]
         self.onset = onset
+        # act once the last fault has started (a fix applied before a fault exists does nothing)
+        starts = [e["at"] for e in scenario["events"] if e.get("faults") or (e.get("deploy") or {}).get("config")]
+        self.act_at = onset + max(60, max(starts, default=0) + 45)
 
     def run(self, env):
         try:
-            while env.now() < self.onset + 60:
+            while env.now() < self.act_at:
                 env.wait(10)
         except BudgetExhausted:
             return
