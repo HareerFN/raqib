@@ -195,7 +195,7 @@ The agent is frozen at this commit. Seeds used from here (budget: about $1.6 of 
 - ablation (no Evidence Ledger): validation, 1 seed, only if credit remains.
 - llm_single_shot: not re-run; its earlier results are reported as they are.
 
-## 2026-10-31 · Final held-out run (`--final`, frozen agent `ade6762`, 3 seeds): in progress
+## 2026-10-31 · Final held-out run (`--final`, frozen agent `1afd941`, 3 seeds): in progress
 - First attempt (6 workers) was stopped after 15 of the 18 hand-written held-out runs because it
   was too slow; nothing from it was reported. The restart (16 workers) replayed the cached
   model answers, so its results are the same as one uninterrupted run.
@@ -213,7 +213,7 @@ The agent is frozen at this commit. Seeds used from here (budget: about $1.6 of 
   is added, with no change to the agent.
 - Result files of the finished runs are kept in `reports/final/`.
 
-## 2026-10-31 · Final results (frozen agent `ade6762`)
+## 2026-10-31 · Final results (frozen agent `1afd941`)
 Credit was added and the gen-heldout run was resumed with the same command. The 141 runs
 finished earlier replayed from the cache, so the result equals one uninterrupted run.
 
@@ -248,7 +248,7 @@ What was known before v2 work started, recorded for transparency:
   opened on a recorded gen-heldout run).
 Because of this, gen-heldout is no longer a clean test for any later version.
 `scenarios/gen_heldout_v2.yaml` (same generator, same held-out mechanisms, new seeds from
-400000) was generated and sealed in commit `3a5334c` before any v2 change. v2 is judged on it.
+400000) was generated and sealed in commit `4f739ca` before any v2 change. v2 is judged on it.
 
 Failure analysis for v2 used only gen-dev and gen-validation runs of v1 (76 failures). No
 held-out trace or result file was opened for it. Two general causes:
@@ -282,8 +282,8 @@ The improvement is clear, so v2 is frozen at this commit and run once on gen_hel
 (`--final`, 3 seeds), with rule-based, Null and Oracle on the same set.
 
 ## 2026-10-31 · Agent v2 on the sealed gen_heldout_v2 (`--final`, 3 seeds, run once)
-- Frozen v2 = commit `e4ed01a`. During the run, OpenRouter sent a truncated reply and the
-  client crashed (55 of 180 runs were printed). Commit `50e3b52` widened the client's retries
+- Frozen v2 = commit `3e2da42`. During the run, OpenRouter sent a truncated reply and the
+  client crashed (55 of 180 runs were printed). Commit `278f732` widened the client's retries
   (transport only: no prompt, cache key or decision changed) and the same command was resumed;
   finished runs replayed from the cache, so the result equals one uninterrupted run.
 
@@ -307,3 +307,9 @@ Reading it plainly:
   of that gain was fitting to it. The held-out number is the one to trust.
 - Resource leaks and the full disk remain the weak spot (33 database restarts, all the same
   symptom-vs-cause confusion found in v1).
+
+## 2026-10-31 · Commit history cleaned
+Commit messages were edited (a co-author trailer removed, one title renamed) and an untracked
+working note was removed from history. File contents, commit order and dates are unchanged,
+so every "committed before" claim still holds; commit ids changed, and the ids quoted in this
+log and in SEALED.md were updated to the new ones.
