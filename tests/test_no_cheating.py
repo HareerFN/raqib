@@ -21,6 +21,7 @@ from baselines.llm_single_shot import LLMSingleShotAgent
 from baselines.rule_based import RuleBasedAgent
 from harness.env import Env
 from harness.runner import run_one
+from raqib.agent import RaqibAgent
 from raqib.llm import FakeLLM
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -179,9 +180,13 @@ DEV = yaml.safe_load((ROOT / "scenarios" / "dev.yaml").read_text(encoding="utf-8
 FAKE_REPLY = json.dumps({"root_causes": [{"service": "worker", "kind": "runtime_fault"}],
                          "actions": [{"action": "restart_service", "params": {"service": "worker"}}],
                          "escalate": False, "summary": "x"})
+RAQIB_REPLY = json.dumps({"investigate": [], "summary": "x", "hypotheses": [
+    {"service": "worker", "kind": "runtime_fault", "supporting": ["E1", "E2", "E3"], "refuting": [],
+     "explains": [], "repair_plan": [{"action": "restart_service", "params": {"service": "worker"}}]}]})
 AGENT_FACTORIES = {
     "rule_based": RuleBasedAgent,
     "llm_single_shot": lambda **kw: LLMSingleShotAgent(llm=FakeLLM(lambda m: FAKE_REPLY), **kw),
+    "raqib": lambda **kw: RaqibAgent(llm=FakeLLM(lambda m: RAQIB_REPLY), **kw),
 }
 
 

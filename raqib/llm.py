@@ -24,7 +24,7 @@ API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 # Choose models here (any OpenRouter model id works). Strong for diagnosis, cheap for simple steps.
 MODELS = {
-    "strong": os.environ.get("RAQIB_MODEL_STRONG", "anthropic/claude-sonnet-4.6"),
+    "strong": os.environ.get("RAQIB_MODEL_STRONG", "deepseek/deepseek-chat-v3.1"),
     "cheap": os.environ.get("RAQIB_MODEL_CHEAP", "openai/gpt-4o-mini"),
 }
 

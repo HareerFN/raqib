@@ -50,6 +50,7 @@ class RunResult:
     evidence_cited: int = 0
     evidence_valid: int = 0
     invalid_evidence: list = field(default_factory=list)
+    timeline: list = field(default_factory=list)   # the agent's own decision log, if it keeps one
     cost_usd: float = 0.0
     llm_calls: int = 0
     success: bool = False
@@ -103,6 +104,7 @@ def run_one(scenario: dict, split: str, agent_factory, seed: int, budget: int = 
                     agent=getattr(agent, "name", type(agent).__name__), onset=onset, fixable=truth["fixable"])
     res.cost_usd = round(getattr(agent, "cost_usd", 0.0), 5)
     res.llm_calls = getattr(agent, "llm_calls", 0)
+    res.timeline = getattr(agent, "timeline", [])
     res.actions = [{"ts": e["ts"] - onset, "action": e["action"], "params": e["params"]}
                    for e in env.trace if e["kind"] == "action"]
     res.diagnosis = env.diagnosis

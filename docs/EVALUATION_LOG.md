@@ -131,3 +131,66 @@ New metric, existing baseline (3 seeds):
 
 A quiet monitor right after a runbook is not proof of recovery: in about a third of generated
 runs, rule_based says "recovered" while the harness finds the system still broken.
+
+## 2026-10-31 · Step B: the Raqib repair agent (built and tuned on dev only), then frozen
+Agent (`raqib/agent.py`, `evidence.py`, `ledger.py`, `reasoner.py`), registered as `raqib`.
+- Evidence collectors (code) write a ledger: invariants, metric changes vs the 300 s healthy
+  baseline, new or surging log signatures, deploys and their timing, absence of deploys,
+  topology. Each item keeps the Env call id it came from and a checkable form of its claim.
+- LLM reasoner: may ask for up to 2 rounds of read-only SQL / log searches, then gives
+  hypotheses with supporting and refuting evidence ids. It never acts.
+- Evidence Ledger gate: a cause is acted on only with support from >= 2 independent sources
+  (database, metrics, logs, deploys), evidence about that service or its dependents, a
+  possible kind (bad_deploy needs a deploy, external needs an external service), and
+  counter-evidence that is not at least as broad and plentiful as the support.
+- Discriminating tests (code): (1) deploy timing: a deploy that lands after the service's
+  symptoms began cannot be their cause; (2) dependency graph: a downstream cause whose cited
+  symptoms are all cited for a proven upstream cause is a symptom, not a cause;
+  (3) experiment: a fix that ran while the symptoms it was meant to explain persisted
+  refutes that (service, kind) for the rest of the incident, and the cause is dropped from
+  the diagnosis.
+- Verifier feedback: rejected hypotheses go back to the reasoner once per round with the
+  reasons; it may cite more evidence, change service or kind, or drop them.
+- Actions: only those tied to a proven cause (rollback / restart of that service, matching
+  the kind) or to a violated invariant (data repairs, via `repairs` in actions.yaml). Idempotent,
+  attempt budget (5 rounds, 4 runs per repair), approval for high risk. Watch window =
+  longest invariant horizon + 30 s; re-runs data repairs while in-flight work lands.
+- Escalation governor: escalate when no cause can be proven twice, when the attempt budget is
+  used up, or when the cause is outside; an outside cause is handed over after the symptoms it
+  does not explain have been handled.
+- Ends with a structured report and an explicit `recovered` claim.
+- Config additions (system documentation, not per-failure): `owns` in topology.yaml (tables
+  each service writes, taken from target/system.py), `repairs` in actions.yaml (the invariant
+  each data repair restores), restart description now says it frees temporary files too.
+- Anti-cheat and leak tests pass on the agent (the scanner made us rename the hypothesis field
+  `fix` to `repair_plan` and drop a `__dict__` use; no exception was added to the scanner).
+
+**Model choice (on hand-written dev, seed 1):** the account budget allows about $0.005 per run.
+| Model | dev success | cost (6 runs) |
+|-------|-------------|---------------|
+| anthropic/claude-sonnet-4.6 | 100% (18 runs, 3 seeds) | $0.72 (18 runs) |
+| openai/gpt-4o-mini | 16.7% | $0.015 |
+| google/gemini-2.5-flash | 83.3% | $0.031 |
+| deepseek/deepseek-chat-v3.1 | 100% | $0.014 |
+DeepSeek V3.1 is the default (`RAQIB_MODEL_STRONG`); every reported number below uses it.
+The cheap tier is unused: evidence is summarized by code, not by an LLM.
+
+**Tuning on gen-dev (seed 1 only, budget):** three versions, each change general.
+| Version | gen-dev success | change |
+|---------|-----------------|--------|
+| v1 | 30.0% | first full run |
+| v2 | 35.0% | verifier feedback, experiment refutation, corrected `owns`, refuting rule by source breadth |
+| v3 (frozen) | 35.0% | escalation governor for outside causes; no measured effect (the model says the outside cause explains every symptom, so it still hands over at once) |
+Rule-based on the same 60 scenarios, seed 1: 26.7%. By fault count, raqib v3 vs rule-based:
+1 fault 52% / 52%, 2 faults 23% / 0%, 3 faults 0% / 0%. Transient origin 17% / 0%.
+False recovery claims: raqib 0 / 60, rule-based 18 / 60. Evidence validity 100% (382 citations).
+2 false failure claims: the budget ran out while the fix was still being watched, the agent
+reported "not verified", and the system had in fact recovered.
+Remaining failures (39): 11 no cause proven with two sources, 11 symptoms remained after 5
+rounds, 11 outside cause handed over while other faults were missed, 6 budget used up.
+
+The agent is frozen at this commit. Seeds used from here (budget: about $1.6 of LLM credit):
+- final held-out (`--final`): hand-written heldout (6) and gen-heldout (60), 3 seeds each.
+- validation (10) and gen-validation (60): 1 seed, only if credit remains after the held-out run.
+- ablation (no Evidence Ledger): validation, 1 seed, only if credit remains.
+- llm_single_shot: not re-run; its earlier results are reported as they are.

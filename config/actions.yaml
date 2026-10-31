@@ -2,13 +2,14 @@
 #   low:    safe and idempotent, run automatically
 #   medium: changes the running system, run and report
 #   high:   touches money or deletes data, needs human approval
-restart_service:              {risk: low,    params: [service], description: Restart a service process; releases its held connections}
-requeue_orphaned_orders:      {risk: low,    params: [], description: Re-enqueue orders that have no live message}
-replay_payment_confirmations: {risk: low,    params: [], description: Idempotently confirm orders whose payment was captured}
-rerequest_supplier_approvals: {risk: low,    params: [], description: Re-send overdue supplier approval requests}
+# repairs: the business invariant a data-repair action restores (it repairs damage, not the cause)
+restart_service:              {risk: low,    params: [service], description: Restart a service process; releases its held connections and temporary files}
+requeue_orphaned_orders:      {risk: low,    params: [], repairs: [I2_no_orphaned_orders], description: Re-enqueue orders that have no live message}
+replay_payment_confirmations: {risk: low,    params: [], repairs: [I1_payment_has_order], description: Idempotently confirm orders whose payment was captured}
+rerequest_supplier_approvals: {risk: low,    params: [], repairs: [I4_workflow_progress], description: Re-send overdue supplier approval requests}
 pause_sync:                   {risk: low,    params: [], description: Stop the accounting sync job}
 resume_sync:                  {risk: low,    params: [], description: Start the accounting sync job}
 rollback_service:             {risk: medium, params: [service], description: Roll a service back to its previous version and config}
-resync_ledger:                {risk: medium, params: [], description: Re-extract invoices and repair invalid ledger rows}
-refund_duplicate_payments:    {risk: high,   params: [], description: Refund every captured payment beyond the first per order}
+resync_ledger:                {risk: medium, params: [], repairs: [I3_ledger_integrity], description: Re-extract invoices and repair invalid ledger rows}
+refund_duplicate_payments:    {risk: high,   params: [], repairs: [I5_single_payment], description: Refund every captured payment beyond the first per order}
 purge_queue:                  {risk: high,   params: [], description: Delete every pending message}
