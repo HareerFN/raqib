@@ -34,3 +34,20 @@ sync-job (an unseen mechanism/service pair). Every scenario holds at least one o
 
     sha256sum scenarios/gen_heldout.yaml        # Linux / Mac
     Get-FileHash scenarios/gen_heldout.yaml     # Windows PowerShell
+
+# Second generated held-out set (for agent v2): sealed
+
+`gen_heldout_v2.yaml` holds 60 scenarios from the same generator and the same held-out
+mechanisms as `gen_heldout.yaml`, with new seeds (from 400000; gen-heldout used 300000+).
+It exists because agent v2 is developed after v1's final results were seen, so v2 needs a
+held-out set that no version of the agent has ever been run on.
+
+- SHA-256 of gen_heldout_v2.yaml at sealing time: `782680f08d2cc17d20c29655095f9c54966ce4d2fd2277bf7d7723d5acb76b5d`
+- Sealed on: 2026-10-31, before any change for agent v2 (v1 is frozen at commit `ade6762`).
+- 35 one-fault, 19 two-fault, 6 three-fault scenarios; 51 fixable. Quality filters as for gen-heldout.
+- Rule: `run_benchmark.py --split gen-heldout-v2` refuses unless `--final` is passed, and the
+  generator refuses to overwrite it. Only Null and Oracle may run on it before v2 is frozen.
+- `tests/test_generator.py` checks this hash too.
+
+    sha256sum scenarios/gen_heldout_v2.yaml        # Linux / Mac
+    Get-FileHash scenarios/gen_heldout_v2.yaml     # Windows PowerShell

@@ -42,7 +42,7 @@ for _name, _flags in ABLATIONS.items():
     AGENTS[_name] = (lambda flags, name: lambda **kw: RaqibAgent(name=name, **flags, **kw))(_flags, _name)
 
 
-SEALED = ("heldout", "gen-heldout")
+SEALED = ("heldout", "gen-heldout", "gen-heldout-v2")
 
 
 def load_split(split: str, n: int | None = None) -> list[dict]:

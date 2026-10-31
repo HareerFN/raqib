@@ -28,7 +28,9 @@ from .runner import run_one
 
 ROOT = Path(__file__).resolve().parent.parent
 LIB = yaml.safe_load((ROOT / "config" / "fault_primitives.yaml").read_text(encoding="utf-8"))
-SPLITS = {"gen-dev": ("dev", 100_000), "gen-validation": ("dev", 200_000), "gen-heldout": ("heldout", 300_000)}
+SPLITS = {"gen-dev": ("dev", 100_000), "gen-validation": ("dev", 200_000), "gen-heldout": ("heldout", 300_000),
+          "gen-heldout-v2": ("heldout", 400_000)}   # second sealed set, for agent v2
+SEALED_SPLITS = ("gen-heldout", "gen-heldout-v2")
 FAULT_COUNT_WEIGHTS = {1: 0.6, 2: 0.3, 3: 0.1}
 EXTERNAL_WEIGHT = 0.5      # external-only pairs are drawn half as often, so most scenarios stay fixable
 
@@ -261,10 +263,10 @@ def main():
     ap.add_argument("--split", required=True, choices=sorted(SPLITS))
     ap.add_argument("--n", type=int, default=60)
     ap.add_argument("--workers", type=int, default=8)
-    ap.add_argument("--force", action="store_true", help="overwrite an existing gen-heldout file")
+    ap.add_argument("--force", action="store_true", help="overwrite an existing sealed file")
     args = ap.parse_args()
-    if args.split == "gen-heldout" and scenario_file(args.split).exists() and not args.force:
-        raise SystemExit("gen-heldout is sealed: it is generated once. See scenarios/SEALED.md")
+    if args.split in SEALED_SPLITS and scenario_file(args.split).exists() and not args.force:
+        raise SystemExit(f"{args.split} is sealed: it is generated once. See scenarios/SEALED.md")
     kept, rejected = generate(args.split, args.n, args.workers, verbose=True)
     path = write(args.split, kept, rejected)
     print(f"\nwrote {path.relative_to(ROOT)}: {len(kept)} kept, {len(rejected)} rejected, sha256 {sha256(path)}")
