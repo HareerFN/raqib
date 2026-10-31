@@ -11,6 +11,7 @@ Setup: put your key in a file named .env at the project root:
 """
 
 import hashlib
+import http.client
 import json
 import os
 import time
@@ -69,13 +70,20 @@ class LLMClient:
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json",
                      "X-Title": "Raqib recovery agent"})
         body = None
-        for attempt in range(3):
+        for attempt in range(5):
             try:
                 with urllib.request.urlopen(req, timeout=120) as resp:
                     body = json.loads(resp.read())
+                if not body.get("choices"):
+                    raise ValueError(f"no choices in reply: {str(body)[:200]}")
                 break
-            except (urllib.error.URLError, TimeoutError) as exc:
-                if attempt == 2:
+            except urllib.error.HTTPError as exc:
+                if exc.code in (401, 402, 403) or attempt == 4:   # no credit or no access: retrying will not help
+                    raise RuntimeError(f"OpenRouter request failed: {exc}") from exc
+                time.sleep(2 ** attempt)
+            except (urllib.error.URLError, TimeoutError, OSError, http.client.HTTPException, ValueError) as exc:
+                # dropped connections and truncated or malformed replies happen on long runs
+                if attempt == 4:
                     raise RuntimeError(f"OpenRouter request failed: {exc}") from exc
                 time.sleep(2 ** attempt)
         content = body["choices"][0]["message"]["content"]
