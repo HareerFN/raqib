@@ -333,6 +333,7 @@
       t, onset: rec ? rec.meta.onset : null, injected: !!rec, samples: src.samples.filter(s => s.t <= t),
       events: rec && phase !== "symptoms" ? rec.timeline.filter(e => e.t <= t) : [],
       agent: !rec || phase === "symptoms" ? "idle" : phase === "done" ? "done" : "running",
+      detected: !!rec && rec.timeline.some(e => e.event === "incident" && e.t <= t),   // the shared monitor has fired
       approvals: rec ? Object.values(rec.trace).filter(x => x.kind === "approval").map(a => ({ action: a.action, approved: a.approved, by: "the reviewer (recorded)" })) : [],
     } : null;
     const info = src ? { topology: src.topology, invariants: src.invariants, actions: src.actions } : null;
@@ -442,7 +443,7 @@
     const rate = rs.length > 1 ? (rs[rs.length - 1].orders - rs[0].orders) * 60 / Math.max(1, rs[rs.length - 1].t - rs[0].t) : 0;
     const after = w.onset != null ? s.filter(x => x.t >= w.onset) : [];
     const symptoms = w.injected && w.onset != null && (after.some(x => viol(x).length || Object.values(x.logs).some(c => c[2] > 0))
-      || w.t - w.onset >= 30);
+      || w.t - w.onset >= 30 || !!w.detected);
     const loadCall = c => isLive ? getJSON("/api/trace/" + c) : rep.rec.trace[c];
 
     const doReveal = () => {
@@ -469,6 +470,7 @@
       const erring = after.some(x => Object.values(x.logs).some(c => c[2] > 0));
       panel = html`<div className="ctl"><h2>${failing || erring ? "Something is wrong" : "Fault injected"}</h2>
       <p>${failing ? "Business rules are failing. Raqib has not looked yet." : erring ? "Errors are appearing in the logs. Raqib has not looked yet."
+        : w.detected ? "The monitor flagged a metric anomaly. Raqib has not looked yet."
         : symptoms ? "Nothing obvious yet. You can wake Raqib now or wait for symptoms." : "Waiting for the first symptoms…"}</p>
       <div className="row"><button className="btn primary" id="btn-run" disabled=${busy || !symptoms} onClick=${() => isLive ? act(post("/api/agent")) : rep.setPhase("agent")}>Run Raqib</button></div></div>`; }
     else if (w.agent === "running") panel = html`<div className="ctl"><h2>Raqib is working</h2>
