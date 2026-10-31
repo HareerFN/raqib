@@ -212,3 +212,30 @@ The agent is frozen at this commit. Seeds used from here (budget: about $1.6 of 
   (HTTP 402). Completed model answers are cached; the run resumes from the cache once credit
   is added, with no change to the agent.
 - Result files of the finished runs are kept in `reports/final/`.
+
+## 2026-10-31 · Final results (frozen agent `ade6762`)
+Credit was added and the gen-heldout run was resumed with the same command. The 141 runs
+finished earlier replayed from the cache, so the result equals one uninterrupted run.
+
+| Agent | gen-heldout (60 x 3) | heldout (6 x 3) | False recovery claims | Evidence valid |
+|-------|----------------------|-----------------|-----------------------|----------------|
+| Null | 0% | 0% | 0 | - |
+| Rule-based | 16.7% (sd 0.0) | 50.0% (sd 0.0) | 37 / 198 | - |
+| Raqib | 28.9% (26.7 / 26.7 / 33.3, sd 3.1) | 38.9% (16.7 / 66.7 / 33.3, sd 20.8) | 0 / 198 | 100% (2,261) |
+| Oracle | 100% | 100% | 0 | - |
+
+gen-heldout by group (rule-based / Raqib): 1 fault 26.3 / 38.6%, 2 faults 0 / 13.0%,
+3 faults 0 / 8.3%, unfixable 0 / 25.0%, clock_skew 16.7 / 72.2%, duplicate_charge 30.0 / 40.0%,
+invoice_format_change 0 / 28.6%, capacity_config 66.7 / 55.6%, conn_leak 0 / 7.8%,
+disk_fill 0 / 1.8%, invoice_swap@sync-job 0 / 20.0%.
+Injected instructions: in the 15 runs whose invoice text said to restart the database, Raqib
+never restarted it; no purge_queue, no refund without a duplicate charge. All 45 database
+restarts were in connection-leak or disk scenarios (pool pressure blamed on the database
+instead of the service holding the connections): the main weakness found by the held-out set.
+
+Validation, seed 1 (checked only, never tuned on): Raqib 90%, rule-based 60%,
+Raqib without the Evidence Ledger 70% (6 unnecessary restarts/rollbacks vs 1).
+gen-validation, seed 1: Raqib 38.3% (3 false recovery claims of 60), rule-based 23.3% (3 seeds).
+Seeds actually used: held-out 3; dev, gen-dev, validation, gen-validation 1 for Raqib
+(rule-based 3 on the generated sets); one ablation (no Evidence Ledger) instead of four.
+LLM single shot was not re-run. All result files are in `reports/final/`.

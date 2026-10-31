@@ -1,0 +1,278 @@
+{
+  "split": "dev",
+  "agent": "llm_single_shot",
+  "seeds": [
+    1
+  ],
+  "summary": {
+    "runs": 6,
+    "success_rate": 100.0,
+    "clean_success_rate": 100.0,
+    "detection_rate": 100.0,
+    "false_alarms": 0,
+    "root_cause_accuracy": 100.0,
+    "recovery_rate": 100.0,
+    "escalation_accuracy": 100.0,
+    "harmful_actions": 0,
+    "unnecessary_actions": 0,
+    "mean_mttd_s": 102.2,
+    "mean_mttr_s": 122.2,
+    "cost_usd": 0.0374
+  },
+  "runs": [
+    {
+      "scenario": "dev_payment_swallow",
+      "split": "dev",
+      "family": "payment_swallow",
+      "seed": 1,
+      "agent": "llm_single_shot",
+      "onset": 472,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 128,
+      "mttr": 128,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": true,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 128,
+          "action": "rollback_service",
+          "params": {
+            "service": "payment-service"
+          }
+        },
+        {
+          "ts": 128,
+          "action": "replay_payment_confirmations",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "payment-service",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [],
+      "cost_usd": 0.00623,
+      "llm_calls": 1,
+      "success": true
+    },
+    {
+      "scenario": "dev_queue_early_ack",
+      "split": "dev",
+      "family": "early_ack",
+      "seed": 1,
+      "agent": "llm_single_shot",
+      "onset": 465,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 155,
+      "mttr": 155,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": true,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 155,
+          "action": "rollback_service",
+          "params": {
+            "service": "worker"
+          }
+        },
+        {
+          "ts": 155,
+          "action": "requeue_orphaned_orders",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "worker",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [],
+      "cost_usd": 0.00607,
+      "llm_calls": 1,
+      "success": true
+    },
+    {
+      "scenario": "dev_invoice_swap",
+      "split": "dev",
+      "family": "invoice_swap",
+      "seed": 1,
+      "agent": "llm_single_shot",
+      "onset": 534,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 6,
+      "mttr": 6,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": true,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 6,
+          "action": "rollback_service",
+          "params": {
+            "service": "invoice-agent"
+          }
+        },
+        {
+          "ts": 6,
+          "action": "resync_ledger",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "invoice-agent",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [],
+      "cost_usd": 0.00616,
+      "llm_calls": 1,
+      "success": true
+    },
+    {
+      "scenario": "dev_callback_lost",
+      "split": "dev",
+      "family": "callback_lost",
+      "seed": 1,
+      "agent": "llm_single_shot",
+      "onset": 512,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 308,
+      "mttr": 308,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": true,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 308,
+          "action": "rollback_service",
+          "params": {
+            "service": "workflow"
+          }
+        },
+        {
+          "ts": 308,
+          "action": "rerequest_supplier_approvals",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "workflow",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [],
+      "cost_usd": 0.00618,
+      "llm_calls": 1,
+      "success": true
+    },
+    {
+      "scenario": "dev_retry_loop",
+      "split": "dev",
+      "family": "agent_retry_loop",
+      "seed": 1,
+      "agent": "llm_single_shot",
+      "onset": 496,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 14,
+      "mttr": 14,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": true,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 14,
+          "action": "rollback_service",
+          "params": {
+            "service": "worker"
+          }
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "worker",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [],
+      "cost_usd": 0.00629,
+      "llm_calls": 1,
+      "success": true
+    },
+    {
+      "scenario": "dev_provider_down",
+      "split": "dev",
+      "family": "provider_down",
+      "seed": 1,
+      "agent": "llm_single_shot",
+      "onset": 528,
+      "fixable": false,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 2,
+      "mttr": null,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": null,
+      "escalated": true,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 2,
+          "action": "replay_payment_confirmations",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "payment-provider",
+          "kind": "external_dependency"
+        }
+      ],
+      "final_violations": [
+        "I7_payments_succeed"
+      ],
+      "cost_usd": 0.00651,
+      "llm_calls": 1,
+      "success": true
+    }
+  ]
+}

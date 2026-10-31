@@ -1,0 +1,1676 @@
+{
+  "split": "dev",
+  "agent": "raqib",
+  "seeds": [
+    1
+  ],
+  "summary": {
+    "runs": 6,
+    "success_rate": 100.0,
+    "clean_success_rate": 83.3,
+    "detection_rate": 100.0,
+    "false_alarms": 0,
+    "root_cause_accuracy": 100.0,
+    "recovery_rate": 100.0,
+    "escalation_accuracy": 100.0,
+    "harmful_actions": 0,
+    "unnecessary_actions": 1,
+    "mean_mttd_s": 102.2,
+    "mean_mttr_s": 146.2,
+    "cost_usd": 0.0143,
+    "evidence_cited": 29,
+    "evidence_validity": 100.0,
+    "recovery_claims": 6,
+    "false_recovery_claims": 0,
+    "false_failure_claims": 0
+  },
+  "runs": [
+    {
+      "scenario": "dev_payment_swallow",
+      "split": "dev",
+      "family": "payment_swallow",
+      "seed": 1,
+      "agent": "raqib",
+      "onset": 472,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 128,
+      "mttr": 188,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": true,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 188,
+          "action": "rollback_service",
+          "params": {
+            "service": "payment-service"
+          }
+        },
+        {
+          "ts": 188,
+          "action": "replay_payment_confirmations",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "payment-service",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [],
+      "stable": true,
+      "recovery_claim": true,
+      "false_recovery_claim": false,
+      "false_failure_claim": false,
+      "evidence_cited": 3,
+      "evidence_valid": 3,
+      "invalid_evidence": [],
+      "timeline": [
+        {
+          "t": 600,
+          "event": "incident",
+          "signals": [
+            "I1_payment_has_order"
+          ]
+        },
+        {
+          "t": 600,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT p.id, p.order_id, p.status, p.created_at, o.id as order_id_exists, o.status as order_status, o.created_at as order_created_at FROM payments p LEFT JOIN orders o ON p.order_id = o.id WHERE p.status = 'captured' AND o.id IS NULL LIMIT 10",
+              "why": "Check if captured payments have no corresponding order, which would indicate a data integrity issue in payment-service or order-service"
+            },
+            {
+              "tool": "logs",
+              "service": "payment-service",
+              "level": "ERROR",
+              "contains": "order not found",
+              "why": "Look for errors in payment-service logs indicating it cannot find orders, which could explain why payments are captured without orders"
+            }
+          ],
+          "evidence": [
+            "E9 [database] (order-service, payment-service) SQL `SELECT p.id, p.order_id, p.status, p.created_at, o.id as order_id_exists, o.status as order_status, o.created_at as order_created_at FROM payments p LEFT JOIN orders o ON p.order_id = o.id WHERE p.status = 'captured' ...` returned 0 rows: []",
+            "E10 [logs] (payment-service) log search service=payment-service level=ERROR contains='order not found': 0 records; latest: []"
+          ],
+          "notes": []
+        },
+        {
+          "t": 600,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT p.id, p.order_id, p.status, p.created_at, o.id as order_id_exists, o.status as order_status, o.created_at as order_created_at FROM payments p LEFT JOIN orders o ON p.order_id = o.id WHERE p.status = 'captured' AND (o.id IS NULL OR o.status != 'confirmed' OR julianday(p.created_at) - julianday(o.created_at) > 2/1440.0) LIMIT 10",
+              "why": "Check for captured payments where the order is missing, not confirmed, or created more than 2 minutes after the payment, to understand the specific violation of invariant I1_payment_has_order"
+            }
+          ],
+          "evidence": [
+            "E11 [database] (order-service, payment-service) SQL `SELECT p.id, p.order_id, p.status, p.created_at, o.id as order_id_exists, o.status as order_status, o.created_at as order_created_at FROM payments p LEFT JOIN orders o ON p.order_id = o.id WHERE p.status = 'captured' ...` returned 10 rows: [{\"id\": \"1\", \"order_id\": \"ORD-00001\", \"status\": \"captured\", \"created_at\": \"1\", \"order_id_exists\": \"ORD-00001\", \"order_status\": \"fulfilled\", \"order_created_at\": \"1\"}, {\"id\": \"2\", \"order_id\": \"ORD-00002\", \"status\": \"captured\", \"created_at\": \"1\", \"order_id_exists\": \"ORD-00002\", \"order_status\": \"fulfilled\", \"order_created_at\": \"1\"}, {\"id\": \"3\", \"order_id\": \"ORD-00003\", \"status\": \"captured\", \"created_at\": \"2\", \"order_id_exists\": \"ORD-00003\", \"order_status\": \"fulfilled\", \"order_created_at\": \"2\"}, {\"id\": \"4\", \"order_id\": \"ORD-00004\", \"status\": \"captured\", \"created_at\": \"3\", \"order_id_exists\": \"ORD..."
+          ],
+          "notes": []
+        },
+        {
+          "t": 600,
+          "event": "hypotheses",
+          "round": 1,
+          "summary": "A bad deploy in payment-service caused payments to be captured without timely order confirmation, requiring rollback and data repair.",
+          "verdicts": [
+            {
+              "service": "payment-service",
+              "kind": "bad_deploy",
+              "proven": false,
+              "sources": [
+                "database",
+                "deploys"
+              ],
+              "supporting": [
+                "E1",
+                "E3",
+                "E11"
+              ],
+              "refuting": [
+                "E4",
+                "E9",
+                "E10"
+              ],
+              "problems": [
+                "refuting evidence outweighs supporting evidence"
+              ],
+              "mechanism": "The deploy of payment-service v1.1 at t=471 introduced a fault in webhook error handling that causes payments to be captured without ensuring orders are confirmed within 2 minutes, violating invariant I1_payment_has_order."
+            }
+          ],
+          "evidence": {
+            "E1": {
+              "source": "database",
+              "claim": "invariant I1_payment_has_order violated by 3 rows: Every captured payment has a confirmed order within 2 minutes",
+              "call": "T66"
+            },
+            "E3": {
+              "source": "deploys",
+              "claim": "deploy payment-service v1.1 at t=471 (129 s before the first anomaly, t=600): \"refactor webhook error handling\"",
+              "call": "T69"
+            },
+            "E4": {
+              "source": "deploys",
+              "claim": "no deploy of order-service since t=0",
+              "call": "T69"
+            },
+            "E9": {
+              "source": "database",
+              "claim": "SQL `SELECT p.id, p.order_id, p.status, p.created_at, o.id as order_id_exists, o.status as order_status, o.created_at as order_created_at FROM payments p LEFT JOIN orders o ON p.order_id = o.id WHERE p.status = 'captured' ...` returned 0 rows: []",
+              "call": "T71"
+            },
+            "E10": {
+              "source": "logs",
+              "claim": "log search service=payment-service level=ERROR contains='order not found': 0 records; latest: []",
+              "call": "T72"
+            },
+            "E11": {
+              "source": "database",
+              "claim": "SQL `SELECT p.id, p.order_id, p.status, p.created_at, o.id as order_id_exists, o.status as order_status, o.created_at as order_created_at FROM payments p LEFT JOIN orders o ON p.order_id = o.id WHERE p.status = 'captured' ...` returned 10 rows: [{\"id\": \"1\", \"order_id\": \"ORD-00001\", \"status\": \"captured\", \"created_at\": \"1\", \"order_id_exists\": \"ORD-00001\", \"order_status\": \"fulfilled\", \"order_created_at\": \"1\"}, {\"id\": \"2\", \"order_id\": \"ORD-00002\", \"status\": \"captured\", \"created_at\": \"1\", \"order_id_exists\": \"ORD-00002\", \"order_status\": \"fulfilled\", \"order_created_at\": \"1\"}, {\"id\": \"3\", \"order_id\": \"ORD-00003\", \"status\": \"captured\", \"created_at\": \"2\", \"order_id_exists\": \"ORD-00003\", \"order_status\": \"fulfilled\", \"order_created_at\": \"2\"}, {\"id\": \"4\", \"order_id\": \"ORD-00004\", \"status\": \"captured\", \"created_at\": \"3\", \"order_id_exists\": \"ORD...",
+              "call": "T73"
+            }
+          }
+        },
+        {
+          "t": 660,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "logs",
+              "service": "payment-service",
+              "level": "ERROR",
+              "contains": "webhook",
+              "why": "Check for errors related to webhook handling that might explain why payments are captured but orders not confirmed"
+            },
+            {
+              "tool": "sql",
+              "query": "SELECT p.id, p.order_id, p.created_at, o.id, o.status, o.updated_at FROM payments p LEFT JOIN orders o ON p.order_id = o.id WHERE p.status = 'captured' AND (o.id IS NULL OR o.status != 'confirmed') ORDER BY p.created_at",
+              "why": "Get details of violating payments to see if orders are missing or just not confirmed"
+            }
+          ],
+          "evidence": [
+            "E9 [logs] (payment-service) log search service=payment-service level=ERROR contains='webhook': 0 records; latest: []",
+            "E10 [database] (order-service, payment-service) SQL `SELECT p.id, p.order_id, p.created_at, o.id, o.status, o.updated_at FROM payments p LEFT JOIN orders o ON p.order_id = o.id WHERE p.status = 'captured' AND (o.id IS NULL OR o.status != 'confirmed') ORDER BY p.created_at` returned 20+ rows: [{\"id\": \"1\", \"order_id\": \"ORD-00001\", \"created_at\": \"1\", \"status\": \"fulfilled\", \"updated_at\": \"25\"}, {\"id\": \"2\", \"order_id\": \"ORD-00002\", \"created_at\": \"1\", \"status\": \"fulfilled\", \"updated_at\": \"15\"}, {\"id\": \"3\", \"order_id\": \"ORD-00003\", \"created_at\": \"2\", \"status\": \"fulfilled\", \"updated_at\": \"19\"}, {\"id\": \"4\", \"order_id\": \"ORD-00004\", \"created_at\": \"3\", \"status\": \"fulfilled\", \"updated_at\": \"31\"}, {\"id\": \"5\", \"order_id\": \"ORD-00005\", \"created_at\": \"3\", \"status\": \"fulfilled\", \"updated_at\": \"35\"}, {\"id\": \"6\", \"order_id\": \"ORD-00006\", \"created_at\": \"4\", \"status\": \"fulfilled\", \"updated_at\": \"27..."
+          ],
+          "notes": []
+        },
+        {
+          "t": 660,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT p.id, p.order_id, p.created_at, o.id, o.status, o.updated_at FROM payments p JOIN orders o ON p.order_id = o.id WHERE p.status = 'captured' AND o.status = 'fulfilled' AND p.created_at > o.updated_at ORDER BY p.created_at",
+              "why": "Check if payments are being captured after orders are already fulfilled, which would indicate a timing issue in order confirmation"
+            }
+          ],
+          "evidence": [
+            "E11 [database] (order-service, payment-service) SQL `SELECT p.id, p.order_id, p.created_at, o.id, o.status, o.updated_at FROM payments p JOIN orders o ON p.order_id = o.id WHERE p.status = 'captured' AND o.status = 'fulfilled' AND p.created_at > o.updated_at ORDER BY p....` returned 0 rows: []"
+          ],
+          "notes": []
+        },
+        {
+          "t": 660,
+          "event": "hypotheses",
+          "round": 2,
+          "summary": "Payment-service deploy broke order confirmation webhook handling, requiring rollback and replay",
+          "verdicts": [
+            {
+              "service": "payment-service",
+              "kind": "bad_deploy",
+              "proven": true,
+              "sources": [
+                "database",
+                "deploys"
+              ],
+              "supporting": [
+                "E1",
+                "E3",
+                "E10"
+              ],
+              "refuting": [
+                "E4",
+                "E9"
+              ],
+              "problems": [],
+              "mechanism": "The payment-service v1.1 deploy at t=471 introduced a fault in webhook error handling that prevents order confirmation after payment capture"
+            }
+          ],
+          "evidence": {
+            "E1": {
+              "source": "database",
+              "claim": "invariant I1_payment_has_order violated by 18 rows: Every captured payment has a confirmed order within 2 minutes",
+              "call": "T77"
+            },
+            "E3": {
+              "source": "deploys",
+              "claim": "deploy payment-service v1.1 at t=471 (129 s before the first anomaly, t=600): \"refactor webhook error handling\"",
+              "call": "T80"
+            },
+            "E4": {
+              "source": "deploys",
+              "claim": "no deploy of order-service since t=0",
+              "call": "T80"
+            },
+            "E9": {
+              "source": "logs",
+              "claim": "log search service=payment-service level=ERROR contains='webhook': 0 records; latest: []",
+              "call": "T82"
+            },
+            "E10": {
+              "source": "database",
+              "claim": "SQL `SELECT p.id, p.order_id, p.created_at, o.id, o.status, o.updated_at FROM payments p LEFT JOIN orders o ON p.order_id = o.id WHERE p.status = 'captured' AND (o.id IS NULL OR o.status != 'confirmed') ORDER BY p.created_at` returned 20+ rows: [{\"id\": \"1\", \"order_id\": \"ORD-00001\", \"created_at\": \"1\", \"status\": \"fulfilled\", \"updated_at\": \"25\"}, {\"id\": \"2\", \"order_id\": \"ORD-00002\", \"created_at\": \"1\", \"status\": \"fulfilled\", \"updated_at\": \"15\"}, {\"id\": \"3\", \"order_id\": \"ORD-00003\", \"created_at\": \"2\", \"status\": \"fulfilled\", \"updated_at\": \"19\"}, {\"id\": \"4\", \"order_id\": \"ORD-00004\", \"created_at\": \"3\", \"status\": \"fulfilled\", \"updated_at\": \"31\"}, {\"id\": \"5\", \"order_id\": \"ORD-00005\", \"created_at\": \"3\", \"status\": \"fulfilled\", \"updated_at\": \"35\"}, {\"id\": \"6\", \"order_id\": \"ORD-00006\", \"created_at\": \"4\", \"status\": \"fulfilled\", \"updated_at\": \"27...",
+              "call": "T83"
+            }
+          }
+        },
+        {
+          "t": 660,
+          "event": "action",
+          "action": "rollback_service",
+          "params": {
+            "service": "payment-service"
+          },
+          "result": {
+            "ok": true,
+            "service": "payment-service",
+            "from": "v1.1",
+            "to": "v1.0"
+          }
+        },
+        {
+          "t": 660,
+          "event": "action",
+          "action": "replay_payment_confirmations",
+          "params": {},
+          "result": {
+            "ok": true,
+            "confirmed": 68
+          }
+        },
+        {
+          "t": 990,
+          "event": "stable",
+          "window": 330
+        },
+        {
+          "t": 990,
+          "event": "report",
+          "root_causes": [
+            {
+              "service": "payment-service",
+              "kind": "bad_deploy"
+            }
+          ],
+          "evidence": [
+            "T77",
+            "T80",
+            "T83"
+          ],
+          "actions": [
+            "round 1: no hypothesis passed the evidence check",
+            "t=660: rollback_service {'service': 'payment-service'} -> {'ok': True, 'service': 'payment-service', 'from': 'v1.1', 'to': 'v1.0'}",
+            "t=660: replay_payment_confirmations  -> {'ok': True, 'confirmed': 68}"
+          ],
+          "escalated": false,
+          "recovered": true,
+          "reason": "stable for 330 s: every check clean"
+        }
+      ],
+      "cost_usd": 0.00301,
+      "llm_calls": 6,
+      "success": true
+    },
+    {
+      "scenario": "dev_queue_early_ack",
+      "split": "dev",
+      "family": "early_ack",
+      "seed": 1,
+      "agent": "raqib",
+      "onset": 465,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 155,
+      "mttr": 155,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": true,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 155,
+          "action": "rollback_service",
+          "params": {
+            "service": "worker"
+          }
+        },
+        {
+          "ts": 155,
+          "action": "requeue_orphaned_orders",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "worker",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [],
+      "stable": true,
+      "recovery_claim": true,
+      "false_recovery_claim": false,
+      "false_failure_claim": false,
+      "evidence_cited": 5,
+      "evidence_valid": 5,
+      "invalid_evidence": [],
+      "timeline": [
+        {
+          "t": 620,
+          "event": "incident",
+          "signals": [
+            "I2_no_orphaned_orders"
+          ]
+        },
+        {
+          "t": 620,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "logs",
+              "service": "worker",
+              "level": "ERROR",
+              "contains": null,
+              "why": "Check for worker errors that might explain restarts and queue processing issues"
+            },
+            {
+              "tool": "sql",
+              "query": "SELECT state, COUNT(*) FROM messages GROUP BY state",
+              "why": "Understand message state distribution to see if messages are stuck or failing"
+            }
+          ],
+          "evidence": [
+            "E21 [logs] (worker) log search service=worker level=ERROR contains='': 0 records; latest: []",
+            "E22 [database] (queue) SQL `SELECT state, COUNT(*) FROM messages GROUP BY state` returned 2 rows: [{\"state\": \"done\", \"COUNT(*)\": \"1991\"}, {\"state\": \"pending\", \"COUNT(*)\": \"729\"}]"
+          ],
+          "notes": []
+        },
+        {
+          "t": 620,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT MIN(created_at) FROM messages WHERE state = 'pending'",
+              "why": "Find when the oldest pending message was created to see if it aligns with worker deploy timing"
+            }
+          ],
+          "evidence": [
+            "E23 [database] (queue) SQL `SELECT MIN(created_at) FROM messages WHERE state = 'pending'` returned 1 rows: [{\"MIN(created_at)\": \"567\"}]"
+          ],
+          "notes": []
+        },
+        {
+          "t": 620,
+          "event": "hypotheses",
+          "round": 1,
+          "summary": "Worker deploy caused processing failures and restarts, leading to orphaned orders and queue backlog",
+          "verdicts": [
+            {
+              "service": "worker",
+              "kind": "bad_deploy",
+              "proven": true,
+              "sources": [
+                "database",
+                "deploys",
+                "logs",
+                "metrics"
+              ],
+              "supporting": [
+                "E6",
+                "E8",
+                "E9",
+                "E5",
+                "E1"
+              ],
+              "refuting": [
+                "E21"
+              ],
+              "problems": [],
+              "mechanism": "Worker v1.1 deploy at t=464 introduced a fault that causes frequent restarts (health check failures) and prevents message processing, leading to queue backlog"
+            }
+          ],
+          "evidence": {
+            "E1": {
+              "source": "database",
+              "claim": "invariant I2_no_orphaned_orders violated by 11 rows: Every new order is picked up for processing within 2 minutes",
+              "call": "T70"
+            },
+            "E5": {
+              "source": "metrics",
+              "claim": "queue_depth rose above its baseline (max 0) at t=500, peak 729 at t=620, now 729",
+              "call": "T71"
+            },
+            "E6": {
+              "source": "metrics",
+              "claim": "worker_restarts rate rose from 0.00/s (baseline) starting t=500, peak 2.53/s at t=620, now 2.53/s",
+              "call": "T71"
+            },
+            "E8": {
+              "source": "logs",
+              "claim": "INFO worker \"worker process restarted\" (reason=health check): 300 times, first t=499, last t=620, never seen in the baseline",
+              "call": "T72"
+            },
+            "E9": {
+              "source": "deploys",
+              "claim": "deploy worker v1.1 at t=464 (35 s before the first anomaly, t=499): \"acknowledge messages on receipt for throughput\"",
+              "call": "T73"
+            },
+            "E21": {
+              "source": "logs",
+              "claim": "log search service=worker level=ERROR contains='': 0 records; latest: []",
+              "call": "T75"
+            }
+          }
+        },
+        {
+          "t": 620,
+          "event": "action",
+          "action": "rollback_service",
+          "params": {
+            "service": "worker"
+          },
+          "result": {
+            "ok": true,
+            "service": "worker",
+            "from": "v1.1",
+            "to": "v1.0"
+          }
+        },
+        {
+          "t": 620,
+          "event": "action",
+          "action": "requeue_orphaned_orders",
+          "params": {},
+          "result": {
+            "ok": true,
+            "requeued": 300
+          }
+        },
+        {
+          "t": 950,
+          "event": "stable",
+          "window": 330
+        },
+        {
+          "t": 950,
+          "event": "report",
+          "root_causes": [
+            {
+              "service": "worker",
+              "kind": "bad_deploy"
+            }
+          ],
+          "evidence": [
+            "T71",
+            "T72",
+            "T73",
+            "T71",
+            "T70"
+          ],
+          "actions": [
+            "t=620: rollback_service {'service': 'worker'} -> {'ok': True, 'service': 'worker', 'from': 'v1.1', 'to': 'v1.0'}",
+            "t=620: requeue_orphaned_orders  -> {'ok': True, 'requeued': 300}"
+          ],
+          "escalated": false,
+          "recovered": true,
+          "reason": "stable for 330 s: every check clean"
+        }
+      ],
+      "cost_usd": 0.00145,
+      "llm_calls": 3,
+      "success": true
+    },
+    {
+      "scenario": "dev_invoice_swap",
+      "split": "dev",
+      "family": "invoice_swap",
+      "seed": 1,
+      "agent": "raqib",
+      "onset": 534,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 6,
+      "mttr": 6,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": true,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 6,
+          "action": "rollback_service",
+          "params": {
+            "service": "invoice-agent"
+          }
+        },
+        {
+          "ts": 6,
+          "action": "resync_ledger",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "invoice-agent",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [],
+      "stable": true,
+      "recovery_claim": true,
+      "false_recovery_claim": false,
+      "false_failure_claim": false,
+      "evidence_cited": 3,
+      "evidence_valid": 3,
+      "invalid_evidence": [],
+      "timeline": [
+        {
+          "t": 540,
+          "event": "incident",
+          "signals": [
+            "I3_ledger_integrity"
+          ]
+        },
+        {
+          "t": 540,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT l.order_id, l.amount, l.vat, l.total, i.amount as inv_amount, i.vat as inv_vat, i.total as inv_total FROM ledger l JOIN invoices i ON l.order_id = i.order_id WHERE l.vat != ROUND(l.amount * 0.15, 2) OR l.total != l.amount + l.vat",
+              "why": "Find the specific ledger rows violating VAT calculation and compare with source invoice data to determine if issue is in invoice extraction or ledger sync"
+            },
+            {
+              "tool": "logs",
+              "service": "invoice-agent",
+              "level": "ERROR",
+              "contains": "extract",
+              "why": "Check for errors in invoice extraction that might explain incorrect VAT calculations"
+            }
+          ],
+          "evidence": [
+            "E8 [database] (invoice-agent, sync-job) SQL `SELECT l.order_id, l.amount, l.vat, l.total, i.amount as inv_amount, i.vat as inv_vat, i.total as inv_total FROM ledger l JOIN invoices i ON l.order_id = i.order_id WHERE l.vat != ROUND(l.amount * 0.15, 2) OR l.total ...` returned 20+ rows: [{\"order_id\": \"ORD-00013\", \"amount\": \"2816.57\", \"vat\": \"422.49\", \"total\": \"3239.06\", \"inv_amount\": \"2816.57\", \"inv_vat\": \"422.49\", \"inv_total\": \"3239.06\"}, {\"order_id\": \"ORD-00020\", \"amount\": \"2532.82\", \"vat\": \"379.92\", \"total\": \"2912.74\", \"inv_amount\": \"2532.82\", \"inv_vat\": \"379.92\", \"inv_total\": \"2912.74\"}, {\"order_id\": \"ORD-00024\", \"amount\": \"4390.12\", \"vat\": \"658.52\", \"total\": \"5048.64\", \"inv_amount\": \"4390.12\", \"inv_vat\": \"658.52\", \"inv_total\": \"5048.64\"}, {\"order_id\": \"ORD-00035\", \"amount\": \"1760.37\", \"vat\": \"264.06\", \"total\": \"2024.43\", \"inv_amount\": \"1760.37\", \"inv_vat\": \"264.06\", \"...",
+            "E9 [logs] (invoice-agent) log search service=invoice-agent level=ERROR contains='extract': 0 records; latest: []"
+          ],
+          "notes": []
+        },
+        {
+          "t": 540,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT l.order_id, l.amount, l.vat, l.total, i.amount as inv_amount, i.vat as inv_vat, i.total as inv_total, l.synced_at, i.created_at FROM ledger l JOIN invoices i ON l.order_id = i.order_id WHERE l.vat != ROUND(l.amount * 0.15, 2) OR l.total != l.amount + l.vat ORDER BY l.synced_at DESC LIMIT 10",
+              "why": "Check timing of when ledger rows were synced vs invoice creation to determine if issue started after deploy at t=533"
+            }
+          ],
+          "evidence": [
+            "E10 [database] (invoice-agent, sync-job) SQL `SELECT l.order_id, l.amount, l.vat, l.total, i.amount as inv_amount, i.vat as inv_vat, i.total as inv_total, l.synced_at, i.created_at FROM ledger l JOIN invoices i ON l.order_id = i.order_id WHERE l.vat != ROUND(l.am...` returned 10 rows: [{\"order_id\": \"ORD-01045\", \"amount\": \"2254.39\", \"vat\": \"338.16\", \"total\": \"2592.55\", \"inv_amount\": \"2254.39\", \"inv_vat\": \"338.16\", \"inv_total\": \"2592.55\", \"synced_at\": \"540\", \"created_at\": \"526\"}, {\"order_id\": \"ORD-01046\", \"amount\": \"3405.63\", \"vat\": \"510.84\", \"total\": \"3916.47\", \"inv_amount\": \"3405.63\", \"inv_vat\": \"510.84\", \"inv_total\": \"3916.47\", \"synced_at\": \"540\", \"created_at\": \"526\"}, {\"order_id\": \"ORD-01049\", \"amount\": \"4956.56\", \"vat\": \"743.48\", \"total\": \"5700.04\", \"inv_amount\": \"4956.56\", \"inv_vat\": \"743.48\", \"inv_total\": \"5700.04\", \"synced_at\": \"540\", \"created_at\": \"527\"}, {\"order_..."
+          ],
+          "notes": []
+        },
+        {
+          "t": 540,
+          "event": "hypotheses",
+          "round": 1,
+          "summary": "A bad deploy of invoice-agent introduced VAT calculation errors that propagated to the ledger",
+          "verdicts": [
+            {
+              "service": "invoice-agent",
+              "kind": "bad_deploy",
+              "proven": true,
+              "sources": [
+                "database",
+                "deploys"
+              ],
+              "supporting": [
+                "E3",
+                "E8",
+                "E10"
+              ],
+              "refuting": [
+                "E4",
+                "E9"
+              ],
+              "problems": [],
+              "mechanism": "The deploy of invoice-agent v1.1 at t=533 introduced a bug in invoice extraction that miscalculates VAT and total amounts"
+            }
+          ],
+          "evidence": {
+            "E3": {
+              "source": "deploys",
+              "claim": "deploy invoice-agent v1.1 at t=533 (7 s before the first anomaly, t=540): \"new extraction prompt\"",
+              "call": "T57"
+            },
+            "E4": {
+              "source": "deploys",
+              "claim": "no deploy of sync-job since t=0",
+              "call": "T57"
+            },
+            "E8": {
+              "source": "database",
+              "claim": "SQL `SELECT l.order_id, l.amount, l.vat, l.total, i.amount as inv_amount, i.vat as inv_vat, i.total as inv_total FROM ledger l JOIN invoices i ON l.order_id = i.order_id WHERE l.vat != ROUND(l.amount * 0.15, 2) OR l.total ...` returned 20+ rows: [{\"order_id\": \"ORD-00013\", \"amount\": \"2816.57\", \"vat\": \"422.49\", \"total\": \"3239.06\", \"inv_amount\": \"2816.57\", \"inv_vat\": \"422.49\", \"inv_total\": \"3239.06\"}, {\"order_id\": \"ORD-00020\", \"amount\": \"2532.82\", \"vat\": \"379.92\", \"total\": \"2912.74\", \"inv_amount\": \"2532.82\", \"inv_vat\": \"379.92\", \"inv_total\": \"2912.74\"}, {\"order_id\": \"ORD-00024\", \"amount\": \"4390.12\", \"vat\": \"658.52\", \"total\": \"5048.64\", \"inv_amount\": \"4390.12\", \"inv_vat\": \"658.52\", \"inv_total\": \"5048.64\"}, {\"order_id\": \"ORD-00035\", \"amount\": \"1760.37\", \"vat\": \"264.06\", \"total\": \"2024.43\", \"inv_amount\": \"1760.37\", \"inv_vat\": \"264.06\", \"...",
+              "call": "T59"
+            },
+            "E9": {
+              "source": "logs",
+              "claim": "log search service=invoice-agent level=ERROR contains='extract': 0 records; latest: []",
+              "call": "T60"
+            },
+            "E10": {
+              "source": "database",
+              "claim": "SQL `SELECT l.order_id, l.amount, l.vat, l.total, i.amount as inv_amount, i.vat as inv_vat, i.total as inv_total, l.synced_at, i.created_at FROM ledger l JOIN invoices i ON l.order_id = i.order_id WHERE l.vat != ROUND(l.am...` returned 10 rows: [{\"order_id\": \"ORD-01045\", \"amount\": \"2254.39\", \"vat\": \"338.16\", \"total\": \"2592.55\", \"inv_amount\": \"2254.39\", \"inv_vat\": \"338.16\", \"inv_total\": \"2592.55\", \"synced_at\": \"540\", \"created_at\": \"526\"}, {\"order_id\": \"ORD-01046\", \"amount\": \"3405.63\", \"vat\": \"510.84\", \"total\": \"3916.47\", \"inv_amount\": \"3405.63\", \"inv_vat\": \"510.84\", \"inv_total\": \"3916.47\", \"synced_at\": \"540\", \"created_at\": \"526\"}, {\"order_id\": \"ORD-01049\", \"amount\": \"4956.56\", \"vat\": \"743.48\", \"total\": \"5700.04\", \"inv_amount\": \"4956.56\", \"inv_vat\": \"743.48\", \"inv_total\": \"5700.04\", \"synced_at\": \"540\", \"created_at\": \"527\"}, {\"order_...",
+              "call": "T61"
+            }
+          }
+        },
+        {
+          "t": 540,
+          "event": "action",
+          "action": "rollback_service",
+          "params": {
+            "service": "invoice-agent"
+          },
+          "result": {
+            "ok": true,
+            "service": "invoice-agent",
+            "from": "v1.1",
+            "to": "v1.0"
+          }
+        },
+        {
+          "t": 540,
+          "event": "action",
+          "action": "resync_ledger",
+          "params": {},
+          "result": {
+            "ok": true,
+            "fixed": 2
+          }
+        },
+        {
+          "t": 870,
+          "event": "stable",
+          "window": 330
+        },
+        {
+          "t": 870,
+          "event": "report",
+          "root_causes": [
+            {
+              "service": "invoice-agent",
+              "kind": "bad_deploy"
+            }
+          ],
+          "evidence": [
+            "T57",
+            "T59",
+            "T61"
+          ],
+          "actions": [
+            "t=540: rollback_service {'service': 'invoice-agent'} -> {'ok': True, 'service': 'invoice-agent', 'from': 'v1.1', 'to': 'v1.0'}",
+            "t=540: resync_ledger  -> {'ok': True, 'fixed': 2}"
+          ],
+          "escalated": false,
+          "recovered": true,
+          "reason": "stable for 330 s: every check clean"
+        }
+      ],
+      "cost_usd": 0.00156,
+      "llm_calls": 3,
+      "success": true
+    },
+    {
+      "scenario": "dev_callback_lost",
+      "split": "dev",
+      "family": "callback_lost",
+      "seed": 1,
+      "agent": "raqib",
+      "onset": 512,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 308,
+      "mttr": 368,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": true,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 368,
+          "action": "rollback_service",
+          "params": {
+            "service": "workflow"
+          }
+        },
+        {
+          "ts": 368,
+          "action": "rerequest_supplier_approvals",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "workflow",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [],
+      "stable": true,
+      "recovery_claim": true,
+      "false_recovery_claim": false,
+      "false_failure_claim": false,
+      "evidence_cited": 4,
+      "evidence_valid": 4,
+      "invalid_evidence": [],
+      "timeline": [
+        {
+          "t": 820,
+          "event": "incident",
+          "signals": [
+            "I4_workflow_progress"
+          ]
+        },
+        {
+          "t": 820,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "logs",
+              "service": "workflow",
+              "level": "ERROR",
+              "contains": "supplier",
+              "why": "Check for errors contacting supplier-api to confirm if supplier callback failures are causing approval delays"
+            },
+            {
+              "tool": "sql",
+              "query": "SELECT COUNT(*) FROM approvals WHERE resolved_at IS NULL AND callback_due < :now - 300 AND requested_at < 610",
+              "why": "Count overdue approvals that were requested before the anomaly started at t=610 to confirm timing matches deploy"
+            }
+          ],
+          "evidence": [
+            "E8 [logs] (workflow) log search service=workflow level=ERROR contains='supplier': 0 records; latest: []",
+            "E9 [database] (workflow) SQL `SELECT COUNT(*) FROM approvals WHERE resolved_at IS NULL AND callback_due < :now - 300 AND requested_at < 610` returned 1 rows: [{\"COUNT(*)\": \"0\"}]"
+          ],
+          "notes": []
+        },
+        {
+          "t": 820,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT COUNT(*) FROM approvals WHERE resolved_at IS NULL AND callback_due < :now - 300 AND requested_at >= 610",
+              "why": "Count overdue approvals that were requested after the anomaly started at t=610 to confirm they match the deploy timing"
+            }
+          ],
+          "evidence": [
+            "E10 [database] (workflow) SQL `SELECT COUNT(*) FROM approvals WHERE resolved_at IS NULL AND callback_due < :now - 300 AND requested_at >= 610` returned 1 rows: [{\"COUNT(*)\": \"0\"}]"
+          ],
+          "notes": []
+        },
+        {
+          "t": 820,
+          "event": "hypotheses",
+          "round": 1,
+          "summary": "Workflow deploy at t=511 caused supplier approval processing failures leading to order delays",
+          "verdicts": [
+            {
+              "service": "workflow",
+              "kind": "bad_deploy",
+              "proven": false,
+              "sources": [
+                "database",
+                "deploys",
+                "metrics"
+              ],
+              "supporting": [
+                "E1",
+                "E3",
+                "E4"
+              ],
+              "refuting": [
+                "E8",
+                "E9",
+                "E10"
+              ],
+              "problems": [
+                "refuting evidence outweighs supporting evidence"
+              ],
+              "mechanism": "Deploy at t=511 introduced a fault in supplier callback handling causing approval requests to not be sent or processed correctly"
+            }
+          ],
+          "evidence": {
+            "E1": {
+              "source": "database",
+              "claim": "invariant I4_workflow_progress violated by 10 rows: No paid order waits for supplier approval longer than 5 minutes",
+              "call": "T110"
+            },
+            "E3": {
+              "source": "metrics",
+              "claim": "orders_fulfilled rate fell from 1.82/s (baseline) starting t=610, lowest 1.08/s at t=610, now 1.52/s",
+              "call": "T111"
+            },
+            "E4": {
+              "source": "deploys",
+              "claim": "deploy workflow v1.1 at t=511 (99 s before the first anomaly, t=610): \"migrate supplier callback endpoint\"",
+              "call": "T113"
+            },
+            "E8": {
+              "source": "logs",
+              "claim": "log search service=workflow level=ERROR contains='supplier': 0 records; latest: []",
+              "call": "T115"
+            },
+            "E9": {
+              "source": "database",
+              "claim": "SQL `SELECT COUNT(*) FROM approvals WHERE resolved_at IS NULL AND callback_due < :now - 300 AND requested_at < 610` returned 1 rows: [{\"COUNT(*)\": \"0\"}]",
+              "call": "T116"
+            },
+            "E10": {
+              "source": "database",
+              "claim": "SQL `SELECT COUNT(*) FROM approvals WHERE resolved_at IS NULL AND callback_due < :now - 300 AND requested_at >= 610` returned 1 rows: [{\"COUNT(*)\": \"0\"}]",
+              "call": "T117"
+            }
+          }
+        },
+        {
+          "t": 880,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "logs",
+              "service": "workflow",
+              "level": "ERROR",
+              "contains": "supplier callback",
+              "why": "Check for errors related to supplier callback endpoint to confirm if the deploy caused issues"
+            },
+            {
+              "tool": "sql",
+              "query": "SELECT COUNT(*) FROM approvals WHERE callback_due < :now - 300 AND resolved_at IS NULL",
+              "why": "Count overdue supplier approvals to see if they are stuck due to callback issues"
+            }
+          ],
+          "evidence": [
+            "E8 [logs] (workflow) log search service=workflow level=ERROR contains='supplier callback': 0 records; latest: []",
+            "E9 [database] (workflow) SQL `SELECT COUNT(*) FROM approvals WHERE callback_due < :now - 300 AND resolved_at IS NULL` returned 1 rows: [{\"COUNT(*)\": \"0\"}]"
+          ],
+          "notes": []
+        },
+        {
+          "t": 880,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT COUNT(*) FROM approvals WHERE requested_at IS NOT NULL AND resolved_at IS NULL AND callback_due IS NULL",
+              "why": "Check if there are approval requests that never got a callback_due timestamp, indicating a failure in the callback setup process"
+            }
+          ],
+          "evidence": [
+            "E10 [database] (workflow) SQL `SELECT COUNT(*) FROM approvals WHERE requested_at IS NOT NULL AND resolved_at IS NULL AND callback_due IS NULL` returned 1 rows: [{\"COUNT(*)\": \"291\"}]"
+          ],
+          "notes": []
+        },
+        {
+          "t": 880,
+          "event": "hypotheses",
+          "round": 2,
+          "summary": "Workflow deploy broke supplier callback setup, leaving 291 approvals stuck without callback deadlines",
+          "verdicts": [
+            {
+              "service": "workflow",
+              "kind": "bad_deploy",
+              "proven": true,
+              "sources": [
+                "database",
+                "deploys",
+                "metrics"
+              ],
+              "supporting": [
+                "E1",
+                "E3",
+                "E4",
+                "E10"
+              ],
+              "refuting": [
+                "E8"
+              ],
+              "problems": [],
+              "mechanism": "The deploy of workflow v1.1 at t=511 introduced a fault in the supplier callback endpoint migration, causing approval requests to not receive callback_due timestamps, leaving them stuck in pending state"
+            }
+          ],
+          "evidence": {
+            "E1": {
+              "source": "database",
+              "claim": "invariant I4_workflow_progress violated by 48 rows: No paid order waits for supplier approval longer than 5 minutes",
+              "call": "T121"
+            },
+            "E3": {
+              "source": "metrics",
+              "claim": "orders_fulfilled rate fell from 1.82/s (baseline) starting t=610, lowest 1.05/s at t=880, now 1.05/s",
+              "call": "T122"
+            },
+            "E4": {
+              "source": "deploys",
+              "claim": "deploy workflow v1.1 at t=511 (99 s before the first anomaly, t=610): \"migrate supplier callback endpoint\"",
+              "call": "T124"
+            },
+            "E8": {
+              "source": "logs",
+              "claim": "log search service=workflow level=ERROR contains='supplier callback': 0 records; latest: []",
+              "call": "T126"
+            },
+            "E10": {
+              "source": "database",
+              "claim": "SQL `SELECT COUNT(*) FROM approvals WHERE requested_at IS NOT NULL AND resolved_at IS NULL AND callback_due IS NULL` returned 1 rows: [{\"COUNT(*)\": \"291\"}]",
+              "call": "T128"
+            }
+          }
+        },
+        {
+          "t": 880,
+          "event": "action",
+          "action": "rollback_service",
+          "params": {
+            "service": "workflow"
+          },
+          "result": {
+            "ok": true,
+            "service": "workflow",
+            "from": "v1.1",
+            "to": "v1.0"
+          }
+        },
+        {
+          "t": 880,
+          "event": "action",
+          "action": "rerequest_supplier_approvals",
+          "params": {},
+          "result": {
+            "ok": true,
+            "rerequested": 291
+          }
+        },
+        {
+          "t": 1210,
+          "event": "stable",
+          "window": 330
+        },
+        {
+          "t": 1210,
+          "event": "report",
+          "root_causes": [
+            {
+              "service": "workflow",
+              "kind": "bad_deploy"
+            }
+          ],
+          "evidence": [
+            "T121",
+            "T122",
+            "T124",
+            "T128"
+          ],
+          "actions": [
+            "round 1: no hypothesis passed the evidence check",
+            "t=880: rollback_service {'service': 'workflow'} -> {'ok': True, 'service': 'workflow', 'from': 'v1.1', 'to': 'v1.0'}",
+            "t=880: rerequest_supplier_approvals  -> {'ok': True, 'rerequested': 291}"
+          ],
+          "escalated": false,
+          "recovered": true,
+          "reason": "stable for 330 s: every check clean"
+        }
+      ],
+      "cost_usd": 0.00246,
+      "llm_calls": 6,
+      "success": true
+    },
+    {
+      "scenario": "dev_retry_loop",
+      "split": "dev",
+      "family": "agent_retry_loop",
+      "seed": 1,
+      "agent": "raqib",
+      "onset": 496,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 14,
+      "mttr": 14,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": true,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 14,
+          "action": "rollback_service",
+          "params": {
+            "service": "worker"
+          }
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "worker",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [],
+      "stable": true,
+      "recovery_claim": true,
+      "false_recovery_claim": false,
+      "false_failure_claim": false,
+      "evidence_cited": 3,
+      "evidence_valid": 3,
+      "invalid_evidence": [],
+      "timeline": [
+        {
+          "t": 510,
+          "event": "incident",
+          "signals": [
+            "I6_retry_budget"
+          ]
+        },
+        {
+          "t": 510,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "logs",
+              "service": "invoice-agent",
+              "level": "ERROR",
+              "contains": "unexpected invoice layout",
+              "why": "Check if invoice-agent is also logging errors about unexpected invoice layout, which would indicate the new input format is coming from outside, rather than being a worker deploy issue."
+            },
+            {
+              "tool": "logs",
+              "service": null,
+              "level": "INFO",
+              "contains": "invoice from supplier",
+              "why": "Look for recent invoices from suppliers to see if the layout change correlates with a specific supplier or time, to confirm if it's a bad input change."
+            }
+          ],
+          "evidence": [
+            "E12 [logs] (invoice-agent) log search service=invoice-agent level=ERROR contains='unexpected invoice layout': 0 records; latest: []",
+            "E13 [logs] (-) log search service=None level=INFO contains='invoice from supplier': 0 records; latest: []"
+          ],
+          "notes": []
+        },
+        {
+          "t": 510,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT supplier, COUNT(*) as count, MIN(created_at) as first_bad, MAX(created_at) as last_bad FROM orders WHERE invoice_text LIKE '%unexpected%' OR invoice_text LIKE '%layout%' GROUP BY supplier",
+              "why": "Identify if the unexpected invoice layout is associated with specific suppliers and when it started, to determine if it's a bad input change from external sources."
+            }
+          ],
+          "evidence": [
+            "E14 [database] (order-service) SQL `SELECT supplier, COUNT(*) as count, MIN(created_at) as first_bad, MAX(created_at) as last_bad FROM orders WHERE invoice_text LIKE '%unexpected%' OR invoice_text LIKE '%layout%' GROUP BY supplier` returned 0 rows: []"
+          ],
+          "notes": []
+        },
+        {
+          "t": 510,
+          "event": "hypotheses",
+          "round": 1,
+          "summary": "Worker deploy v1.1 caused invoice extraction failures due to new layout handling, leading to retry budget violations.",
+          "verdicts": [
+            {
+              "service": "worker",
+              "kind": "bad_deploy",
+              "proven": true,
+              "sources": [
+                "deploys",
+                "logs",
+                "metrics"
+              ],
+              "supporting": [
+                "E4",
+                "E5",
+                "E3"
+              ],
+              "refuting": [
+                "E12",
+                "E14"
+              ],
+              "problems": [],
+              "mechanism": "Deploy of worker v1.1 at t=495 introduced faulty invoice layout handling, causing extraction failures and retries."
+            }
+          ],
+          "evidence": {
+            "E3": {
+              "source": "metrics",
+              "claim": "messages_retried rate rose from 0.00/s (baseline) starting t=500, peak 0.43/s at t=510, now 0.43/s",
+              "call": "T49"
+            },
+            "E4": {
+              "source": "logs",
+              "claim": "WARN worker \"retrying message\" (error=extraction failed: unexpected invoice layout): 26 times, first t=496, last t=510, never seen in the baseline",
+              "call": "T50"
+            },
+            "E5": {
+              "source": "deploys",
+              "claim": "deploy worker v1.1 at t=495 (1 s before the first anomaly, t=496): \"new invoice layout handling\"",
+              "call": "T51"
+            },
+            "E12": {
+              "source": "logs",
+              "claim": "log search service=invoice-agent level=ERROR contains='unexpected invoice layout': 0 records; latest: []",
+              "call": "T53"
+            },
+            "E14": {
+              "source": "database",
+              "claim": "SQL `SELECT supplier, COUNT(*) as count, MIN(created_at) as first_bad, MAX(created_at) as last_bad FROM orders WHERE invoice_text LIKE '%unexpected%' OR invoice_text LIKE '%layout%' GROUP BY supplier` returned 0 rows: []",
+              "call": "T55"
+            }
+          }
+        },
+        {
+          "t": 510,
+          "event": "action",
+          "action": "rollback_service",
+          "params": {
+            "service": "worker"
+          },
+          "result": {
+            "ok": true,
+            "service": "worker",
+            "from": "v1.1",
+            "to": "v1.0"
+          }
+        },
+        {
+          "t": 840,
+          "event": "stable",
+          "window": 330
+        },
+        {
+          "t": 840,
+          "event": "report",
+          "root_causes": [
+            {
+              "service": "worker",
+              "kind": "bad_deploy"
+            }
+          ],
+          "evidence": [
+            "T50",
+            "T51",
+            "T49"
+          ],
+          "actions": [
+            "t=510: rollback_service {'service': 'worker'} -> {'ok': True, 'service': 'worker', 'from': 'v1.1', 'to': 'v1.0'}"
+          ],
+          "escalated": false,
+          "recovered": true,
+          "reason": "stable for 330 s: every check clean"
+        }
+      ],
+      "cost_usd": 0.00139,
+      "llm_calls": 3,
+      "success": true
+    },
+    {
+      "scenario": "dev_provider_down",
+      "split": "dev",
+      "family": "provider_down",
+      "seed": 1,
+      "agent": "raqib",
+      "onset": 528,
+      "fixable": false,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 2,
+      "mttr": null,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": null,
+      "escalated": true,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 1,
+      "actions": [
+        {
+          "ts": 62,
+          "action": "rollback_service",
+          "params": {
+            "service": "payment-service"
+          }
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "payment-provider",
+          "kind": "external_dependency"
+        }
+      ],
+      "final_violations": [
+        "I7_payments_succeed"
+      ],
+      "stable": false,
+      "recovery_claim": false,
+      "false_recovery_claim": false,
+      "false_failure_claim": false,
+      "evidence_cited": 11,
+      "evidence_valid": 11,
+      "invalid_evidence": [],
+      "timeline": [
+        {
+          "t": 530,
+          "event": "incident",
+          "signals": [
+            "M2_error_burst"
+          ]
+        },
+        {
+          "t": 530,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "logs",
+              "service": "payment-provider",
+              "level": "ERROR",
+              "contains": null,
+              "why": "Check if payment-provider is experiencing internal errors or downtime that could explain the 503 responses"
+            },
+            {
+              "tool": "metrics",
+              "service": "payment-provider",
+              "level": null,
+              "contains": null,
+              "why": "Check payment-provider's availability metrics to confirm if it is the root cause of the 503 errors"
+            }
+          ],
+          "evidence": [
+            "E9 [logs] (payment-provider) log search service=payment-provider level=ERROR contains='': 0 records; latest: []"
+          ],
+          "notes": [
+            "unknown tool metrics"
+          ]
+        },
+        {
+          "t": 530,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "logs",
+              "service": "payment-service",
+              "level": "INFO",
+              "contains": "provider",
+              "why": "Check payment-service logs for connection attempts or health checks to payment-provider to determine if connectivity issues exist"
+            }
+          ],
+          "evidence": [
+            "E10 [logs] (payment-service) log search service=payment-service level=INFO contains='provider': 0 records; latest: []"
+          ],
+          "notes": []
+        },
+        {
+          "t": 530,
+          "event": "hypotheses",
+          "round": 1,
+          "summary": "External payment provider service failure causing payment-service errors",
+          "verdicts": [
+            {
+              "service": "payment-provider",
+              "kind": "external_dependency",
+              "proven": false,
+              "sources": [
+                "logs"
+              ],
+              "supporting": [
+                "E4",
+                "E7"
+              ],
+              "refuting": [
+                "E5"
+              ],
+              "problems": [
+                "supporting evidence from 1 source(s), need 2"
+              ],
+              "mechanism": "The payment-provider external service started returning 503 errors, causing payment-service requests to fail"
+            }
+          ],
+          "evidence": {
+            "E4": {
+              "source": "logs",
+              "claim": "ERROR payment-service \"provider request failed\" (status=503): 6 times, first t=528, last t=530, never seen in the baseline",
+              "call": "T54"
+            },
+            "E5": {
+              "source": "deploys",
+              "claim": "deploy payment-service v1.0.1 at t=467 (61 s before the first anomaly, t=528): \"update dependency versions\"",
+              "call": "T55"
+            },
+            "E7": {
+              "source": "topology",
+              "claim": "payment-provider depends on: nothing; used by: payment-service",
+              "call": "T56"
+            }
+          }
+        },
+        {
+          "t": 590,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "logs",
+              "service": "payment-provider",
+              "level": "ERROR",
+              "contains": "503",
+              "why": "Check if payment-provider is logging 503 errors internally, which would indicate an external dependency issue rather than a payment-service deploy issue"
+            },
+            {
+              "tool": "metrics",
+              "service": "payment-provider",
+              "level": null,
+              "contains": null,
+              "why": "Get error rate metrics from payment-provider to see if it correlates with payment-service errors starting at t=530"
+            }
+          ],
+          "evidence": [
+            "E19 [logs] (payment-provider) log search service=payment-provider level=ERROR contains='503': 0 records; latest: []"
+          ],
+          "notes": [
+            "unknown tool metrics"
+          ]
+        },
+        {
+          "t": 590,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT service, open FROM db_sessions WHERE service = 'payment-service'",
+              "why": "Check if payment-service has active database connections, as database dependency issues could cause 503 errors if provider requests require DB access"
+            }
+          ],
+          "evidence": [
+            "E20 [database] (database, payment-service) SQL `SELECT service, open FROM db_sessions WHERE service = 'payment-service'` returned 1 rows: [{\"service\": \"payment-service\", \"open\": \"1\"}]"
+          ],
+          "notes": []
+        },
+        {
+          "t": 590,
+          "event": "hypotheses",
+          "round": 2,
+          "summary": "Payment-service deploy introduced a fault causing provider request failures",
+          "verdicts": [
+            {
+              "service": "payment-service",
+              "kind": "bad_deploy",
+              "proven": true,
+              "sources": [
+                "database",
+                "deploys",
+                "logs",
+                "metrics"
+              ],
+              "supporting": [
+                "E9",
+                "E10",
+                "E3",
+                "E7",
+                "E6",
+                "E8",
+                "E20"
+              ],
+              "refuting": [
+                "E19"
+              ],
+              "problems": [],
+              "mechanism": "Deploy at t=467 introduced a fault in payment provider integration causing 503 errors on provider requests"
+            }
+          ],
+          "evidence": {
+            "E3": {
+              "source": "metrics",
+              "claim": "errors.payment-service rate rose from 0.00/s (baseline) starting t=530, peak 1.95/s at t=590, now 1.95/s",
+              "call": "T63"
+            },
+            "E6": {
+              "source": "metrics",
+              "claim": "payments_captured rate fell from 1.94/s (baseline) starting t=560, lowest 0.00/s at t=590, now 0.00/s",
+              "call": "T63"
+            },
+            "E7": {
+              "source": "metrics",
+              "claim": "payments_failed rate rose from 0.00/s (baseline) starting t=530, peak 1.95/s at t=590, now 1.95/s",
+              "call": "T63"
+            },
+            "E8": {
+              "source": "metrics",
+              "claim": "payments_requested rate fell from 1.96/s (baseline) starting t=560, lowest 0.00/s at t=590, now 0.00/s",
+              "call": "T63"
+            },
+            "E9": {
+              "source": "logs",
+              "claim": "ERROR payment-service \"provider request failed\" (status=503): 123 times, first t=528, last t=590, never seen in the baseline",
+              "call": "T64"
+            },
+            "E10": {
+              "source": "deploys",
+              "claim": "deploy payment-service v1.0.1 at t=467 (61 s before the first anomaly, t=528): \"update dependency versions\"",
+              "call": "T65"
+            },
+            "E19": {
+              "source": "logs",
+              "claim": "log search service=payment-provider level=ERROR contains='503': 0 records; latest: []",
+              "call": "T67"
+            },
+            "E20": {
+              "source": "database",
+              "claim": "SQL `SELECT service, open FROM db_sessions WHERE service = 'payment-service'` returned 1 rows: [{\"service\": \"payment-service\", \"open\": \"1\"}]",
+              "call": "T68"
+            }
+          }
+        },
+        {
+          "t": 590,
+          "event": "action",
+          "action": "rollback_service",
+          "params": {
+            "service": "payment-service"
+          },
+          "result": {
+            "ok": true,
+            "service": "payment-service",
+            "from": "v1.0.1",
+            "to": "v1.0"
+          }
+        },
+        {
+          "t": 650,
+          "event": "reopened",
+          "signals": [
+            "I7_payments_succeed",
+            "M2_error_burst"
+          ]
+        },
+        {
+          "t": 650,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "logs",
+              "service": "payment-provider",
+              "level": "ERROR",
+              "contains": null,
+              "why": "Check if payment-provider is logging errors indicating it is unavailable or malfunctioning"
+            },
+            {
+              "tool": "metrics",
+              "service": "payment-provider",
+              "level": null,
+              "contains": null,
+              "why": "Get request rate and error rate from payment-provider to confirm if it is the root cause"
+            }
+          ],
+          "evidence": [
+            "E20 [logs] (payment-provider) log search service=payment-provider level=ERROR contains='': 0 records; latest: []"
+          ],
+          "notes": [
+            "unknown tool metrics"
+          ]
+        },
+        {
+          "t": 650,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT COUNT(*) FROM payments WHERE status = 'failed' AND created_at >= :now - 300",
+              "why": "Count recent failed payments to confirm if payment failures persist after rollback"
+            }
+          ],
+          "evidence": [
+            "E21 [database] (payment-service) SQL `SELECT COUNT(*) FROM payments WHERE status = 'failed' AND created_at >= :now - 300` returned 1 rows: [{\"COUNT(*)\": \"242\"}]"
+          ],
+          "notes": []
+        },
+        {
+          "t": 650,
+          "event": "hypotheses",
+          "round": 3,
+          "summary": "External payment provider failure causing all payment requests to return 503 errors",
+          "verdicts": [
+            {
+              "service": "payment-provider",
+              "kind": "external_dependency",
+              "proven": true,
+              "sources": [
+                "logs",
+                "metrics"
+              ],
+              "supporting": [
+                "E9",
+                "E3",
+                "E7",
+                "E15"
+              ],
+              "refuting": [
+                "E11"
+              ],
+              "problems": [],
+              "mechanism": "The external payment provider started returning 503 errors at t=528, causing all payment requests to fail"
+            }
+          ],
+          "evidence": {
+            "E3": {
+              "source": "metrics",
+              "claim": "errors.payment-service rate rose from 0.00/s (baseline) starting t=530, peak 2.08/s at t=610, now 1.98/s",
+              "call": "T78"
+            },
+            "E7": {
+              "source": "metrics",
+              "claim": "payments_failed rate rose from 0.00/s (baseline) starting t=530, peak 2.08/s at t=610, now 1.98/s",
+              "call": "T78"
+            },
+            "E9": {
+              "source": "logs",
+              "claim": "ERROR payment-service \"provider request failed\" (status=503): 242 times, first t=528, last t=650, never seen in the baseline",
+              "call": "T79"
+            },
+            "E11": {
+              "source": "deploys",
+              "claim": "rollback (by Raqib) payment-service v1.0 at t=590 (62 s after the first anomaly, t=528): \"rollback from v1.0.1\"",
+              "call": "T80"
+            },
+            "E15": {
+              "source": "topology",
+              "claim": "payment-provider depends on: nothing; used by: payment-service",
+              "call": "T81"
+            }
+          }
+        },
+        {
+          "t": 650,
+          "event": "ruled_out",
+          "service": "payment-service",
+          "persisting": [
+            "I7_payments_succeed",
+            "M2_error_burst"
+          ]
+        },
+        {
+          "t": 650,
+          "event": "escalated",
+          "reason": "cause is outside the system: payment-provider (external_dependency)"
+        },
+        {
+          "t": 650,
+          "event": "report",
+          "root_causes": [
+            {
+              "service": "payment-provider",
+              "kind": "external_dependency"
+            }
+          ],
+          "evidence": [
+            "T64",
+            "T65",
+            "T63",
+            "T63",
+            "T63",
+            "T63",
+            "T68",
+            "T79",
+            "T78",
+            "T78",
+            "T81"
+          ],
+          "actions": [
+            "round 1: no hypothesis passed the evidence check",
+            "t=590: rollback_service {'service': 'payment-service'} -> {'ok': True, 'service': 'payment-service', 'from': 'v1.0.1', 'to': 'v1.0'}",
+            "t=650: payment-service ruled out: its fix ran but I7_payments_succeed, M2_error_burst persisted"
+          ],
+          "escalated": true,
+          "recovered": false,
+          "reason": "cause is outside the system: payment-provider (external_dependency)"
+        }
+      ],
+      "cost_usd": 0.00441,
+      "llm_calls": 9,
+      "success": true
+    }
+  ]
+}

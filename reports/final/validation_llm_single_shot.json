@@ -1,0 +1,1319 @@
+{
+  "split": "validation",
+  "agent": "llm_single_shot",
+  "seeds": [
+    1,
+    2,
+    3
+  ],
+  "summary": {
+    "runs": 30,
+    "success_rate": 60.0,
+    "clean_success_rate": 60.0,
+    "detection_rate": 100.0,
+    "false_alarms": 0,
+    "root_cause_accuracy": 60.0,
+    "recovery_rate": 87.5,
+    "escalation_accuracy": 93.3,
+    "harmful_actions": 0,
+    "unnecessary_actions": 1,
+    "mean_mttd_s": 119.7,
+    "mean_mttr_s": 122.4,
+    "cost_usd": 0.1888
+  },
+  "runs": [
+    {
+      "scenario": "val_payment_swallow",
+      "split": "validation",
+      "family": "payment_swallow",
+      "seed": 1,
+      "agent": "llm_single_shot",
+      "onset": 528,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 122,
+      "mttr": 122,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": true,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 122,
+          "action": "rollback_service",
+          "params": {
+            "service": "payment-service"
+          }
+        },
+        {
+          "ts": 122,
+          "action": "replay_payment_confirmations",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "payment-service",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [],
+      "cost_usd": 0.00643,
+      "llm_calls": 1,
+      "success": true
+    },
+    {
+      "scenario": "val_payment_swallow",
+      "split": "validation",
+      "family": "payment_swallow",
+      "seed": 2,
+      "agent": "llm_single_shot",
+      "onset": 456,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 144,
+      "mttr": 144,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": true,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 144,
+          "action": "rollback_service",
+          "params": {
+            "service": "payment-service"
+          }
+        },
+        {
+          "ts": 144,
+          "action": "replay_payment_confirmations",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "payment-service",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [],
+      "cost_usd": 0.00642,
+      "llm_calls": 1,
+      "success": true
+    },
+    {
+      "scenario": "val_payment_swallow",
+      "split": "validation",
+      "family": "payment_swallow",
+      "seed": 3,
+      "agent": "llm_single_shot",
+      "onset": 424,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 126,
+      "mttr": 126,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": true,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 126,
+          "action": "rollback_service",
+          "params": {
+            "service": "payment-service"
+          }
+        },
+        {
+          "ts": 126,
+          "action": "replay_payment_confirmations",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "payment-service",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [],
+      "cost_usd": 0.00647,
+      "llm_calls": 1,
+      "success": true
+    },
+    {
+      "scenario": "val_queue_early_ack",
+      "split": "validation",
+      "family": "early_ack",
+      "seed": 1,
+      "agent": "llm_single_shot",
+      "onset": 500,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 220,
+      "mttr": 220,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": true,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 220,
+          "action": "rollback_service",
+          "params": {
+            "service": "worker"
+          }
+        },
+        {
+          "ts": 220,
+          "action": "requeue_orphaned_orders",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "worker",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [],
+      "cost_usd": 0.00635,
+      "llm_calls": 1,
+      "success": true
+    },
+    {
+      "scenario": "val_queue_early_ack",
+      "split": "validation",
+      "family": "early_ack",
+      "seed": 2,
+      "agent": "llm_single_shot",
+      "onset": 449,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 221,
+      "mttr": 221,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": true,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 221,
+          "action": "rollback_service",
+          "params": {
+            "service": "worker"
+          }
+        },
+        {
+          "ts": 221,
+          "action": "requeue_orphaned_orders",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "worker",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [],
+      "cost_usd": 0.00619,
+      "llm_calls": 1,
+      "success": true
+    },
+    {
+      "scenario": "val_queue_early_ack",
+      "split": "validation",
+      "family": "early_ack",
+      "seed": 3,
+      "agent": "llm_single_shot",
+      "onset": 519,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 221,
+      "mttr": 221,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": true,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 221,
+          "action": "rollback_service",
+          "params": {
+            "service": "worker"
+          }
+        },
+        {
+          "ts": 221,
+          "action": "requeue_orphaned_orders",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "worker",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [],
+      "cost_usd": 0.00619,
+      "llm_calls": 1,
+      "success": true
+    },
+    {
+      "scenario": "val_invoice_swap",
+      "split": "validation",
+      "family": "invoice_swap",
+      "seed": 1,
+      "agent": "llm_single_shot",
+      "onset": 481,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 19,
+      "mttr": 19,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": true,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 19,
+          "action": "rollback_service",
+          "params": {
+            "service": "invoice-agent"
+          }
+        },
+        {
+          "ts": 19,
+          "action": "resync_ledger",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "invoice-agent",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [],
+      "cost_usd": 0.00587,
+      "llm_calls": 1,
+      "success": true
+    },
+    {
+      "scenario": "val_invoice_swap",
+      "split": "validation",
+      "family": "invoice_swap",
+      "seed": 2,
+      "agent": "llm_single_shot",
+      "onset": 459,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 11,
+      "mttr": 11,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": true,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 11,
+          "action": "rollback_service",
+          "params": {
+            "service": "invoice-agent"
+          }
+        },
+        {
+          "ts": 11,
+          "action": "resync_ledger",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "invoice-agent",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [],
+      "cost_usd": 0.00604,
+      "llm_calls": 1,
+      "success": true
+    },
+    {
+      "scenario": "val_invoice_swap",
+      "split": "validation",
+      "family": "invoice_swap",
+      "seed": 3,
+      "agent": "llm_single_shot",
+      "onset": 516,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 24,
+      "mttr": 24,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": true,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 24,
+          "action": "rollback_service",
+          "params": {
+            "service": "invoice-agent"
+          }
+        },
+        {
+          "ts": 24,
+          "action": "resync_ledger",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "invoice-agent",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [],
+      "cost_usd": 0.0062,
+      "llm_calls": 1,
+      "success": true
+    },
+    {
+      "scenario": "val_callback_lost",
+      "split": "validation",
+      "family": "callback_lost",
+      "seed": 1,
+      "agent": "llm_single_shot",
+      "onset": 514,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 306,
+      "mttr": 306,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": true,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 306,
+          "action": "rollback_service",
+          "params": {
+            "service": "workflow"
+          }
+        },
+        {
+          "ts": 306,
+          "action": "rerequest_supplier_approvals",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "workflow",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [],
+      "cost_usd": 0.00623,
+      "llm_calls": 1,
+      "success": true
+    },
+    {
+      "scenario": "val_callback_lost",
+      "split": "validation",
+      "family": "callback_lost",
+      "seed": 2,
+      "agent": "llm_single_shot",
+      "onset": 482,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 308,
+      "mttr": 308,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": true,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 308,
+          "action": "rollback_service",
+          "params": {
+            "service": "workflow"
+          }
+        },
+        {
+          "ts": 308,
+          "action": "rerequest_supplier_approvals",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "workflow",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [],
+      "cost_usd": 0.00623,
+      "llm_calls": 1,
+      "success": true
+    },
+    {
+      "scenario": "val_callback_lost",
+      "split": "validation",
+      "family": "callback_lost",
+      "seed": 3,
+      "agent": "llm_single_shot",
+      "onset": 441,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 309,
+      "mttr": 309,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": true,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 309,
+          "action": "rollback_service",
+          "params": {
+            "service": "workflow"
+          }
+        },
+        {
+          "ts": 309,
+          "action": "rerequest_supplier_approvals",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "workflow",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [],
+      "cost_usd": 0.00624,
+      "llm_calls": 1,
+      "success": true
+    },
+    {
+      "scenario": "val_retry_loop",
+      "split": "validation",
+      "family": "agent_retry_loop",
+      "seed": 1,
+      "agent": "llm_single_shot",
+      "onset": 514,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 16,
+      "mttr": 16,
+      "root_cause_correct": false,
+      "root_cause_recall": 1.0,
+      "recovered": true,
+      "escalated": true,
+      "escalation_correct": false,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 16,
+          "action": "rollback_service",
+          "params": {
+            "service": "worker"
+          }
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "worker",
+          "kind": "bad_deploy"
+        },
+        {
+          "service": "invoice-agent",
+          "kind": "bad_input"
+        }
+      ],
+      "final_violations": [],
+      "cost_usd": 0.00717,
+      "llm_calls": 1,
+      "success": false
+    },
+    {
+      "scenario": "val_retry_loop",
+      "split": "validation",
+      "family": "agent_retry_loop",
+      "seed": 2,
+      "agent": "llm_single_shot",
+      "onset": 449,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 21,
+      "mttr": 21,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": true,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 21,
+          "action": "rollback_service",
+          "params": {
+            "service": "worker"
+          }
+        },
+        {
+          "ts": 21,
+          "action": "requeue_orphaned_orders",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "worker",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [],
+      "cost_usd": 0.00736,
+      "llm_calls": 1,
+      "success": true
+    },
+    {
+      "scenario": "val_retry_loop",
+      "split": "validation",
+      "family": "agent_retry_loop",
+      "seed": 3,
+      "agent": "llm_single_shot",
+      "onset": 519,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 11,
+      "mttr": 11,
+      "root_cause_correct": false,
+      "root_cause_recall": 1.0,
+      "recovered": true,
+      "escalated": true,
+      "escalation_correct": false,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 11,
+          "action": "rollback_service",
+          "params": {
+            "service": "worker"
+          }
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "invoice-agent",
+          "kind": "bad_input"
+        },
+        {
+          "service": "worker",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [],
+      "cost_usd": 0.00744,
+      "llm_calls": 1,
+      "success": false
+    },
+    {
+      "scenario": "val_provider_down",
+      "split": "validation",
+      "family": "provider_down",
+      "seed": 1,
+      "agent": "llm_single_shot",
+      "onset": 493,
+      "fixable": false,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 7,
+      "mttr": null,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": null,
+      "escalated": true,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 7,
+          "action": "replay_payment_confirmations",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "payment-provider",
+          "kind": "external_dependency"
+        }
+      ],
+      "final_violations": [
+        "I7_payments_succeed"
+      ],
+      "cost_usd": 0.00674,
+      "llm_calls": 1,
+      "success": true
+    },
+    {
+      "scenario": "val_provider_down",
+      "split": "validation",
+      "family": "provider_down",
+      "seed": 2,
+      "agent": "llm_single_shot",
+      "onset": 521,
+      "fixable": false,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 9,
+      "mttr": null,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": null,
+      "escalated": true,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [],
+      "diagnosis": [
+        {
+          "service": "payment-provider",
+          "kind": "external_dependency"
+        }
+      ],
+      "final_violations": [
+        "I7_payments_succeed"
+      ],
+      "cost_usd": 0.00625,
+      "llm_calls": 1,
+      "success": true
+    },
+    {
+      "scenario": "val_provider_down",
+      "split": "validation",
+      "family": "provider_down",
+      "seed": 3,
+      "agent": "llm_single_shot",
+      "onset": 501,
+      "fixable": false,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 9,
+      "mttr": null,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": null,
+      "escalated": true,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 9,
+          "action": "replay_payment_confirmations",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "payment-provider",
+          "kind": "external_dependency"
+        }
+      ],
+      "final_violations": [
+        "I7_payments_succeed"
+      ],
+      "cost_usd": 0.00653,
+      "llm_calls": 1,
+      "success": true
+    },
+    {
+      "scenario": "val_decoy_after_fault",
+      "split": "validation",
+      "family": "invoice_swap",
+      "seed": 1,
+      "agent": "llm_single_shot",
+      "onset": 500,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 10,
+      "mttr": 10,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": true,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 10,
+          "action": "rollback_service",
+          "params": {
+            "service": "invoice-agent"
+          }
+        },
+        {
+          "ts": 10,
+          "action": "resync_ledger",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "invoice-agent",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [],
+      "cost_usd": 0.00621,
+      "llm_calls": 1,
+      "success": true
+    },
+    {
+      "scenario": "val_decoy_after_fault",
+      "split": "validation",
+      "family": "invoice_swap",
+      "seed": 2,
+      "agent": "llm_single_shot",
+      "onset": 442,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 28,
+      "mttr": 28,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": true,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 28,
+          "action": "rollback_service",
+          "params": {
+            "service": "invoice-agent"
+          }
+        },
+        {
+          "ts": 28,
+          "action": "resync_ledger",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "invoice-agent",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [],
+      "cost_usd": 0.00611,
+      "llm_calls": 1,
+      "success": true
+    },
+    {
+      "scenario": "val_decoy_after_fault",
+      "split": "validation",
+      "family": "invoice_swap",
+      "seed": 3,
+      "agent": "llm_single_shot",
+      "onset": 499,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 11,
+      "mttr": 11,
+      "root_cause_correct": false,
+      "root_cause_recall": 1.0,
+      "recovered": true,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 1,
+      "actions": [
+        {
+          "ts": 11,
+          "action": "rollback_service",
+          "params": {
+            "service": "invoice-agent"
+          }
+        },
+        {
+          "ts": 11,
+          "action": "rollback_service",
+          "params": {
+            "service": "sync-job"
+          }
+        },
+        {
+          "ts": 11,
+          "action": "resync_ledger",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "invoice-agent",
+          "kind": "bad_deploy"
+        },
+        {
+          "service": "sync-job",
+          "kind": "config_change"
+        }
+      ],
+      "final_violations": [],
+      "cost_usd": 0.00724,
+      "llm_calls": 1,
+      "success": false
+    },
+    {
+      "scenario": "val_two_dev_faults",
+      "split": "validation",
+      "family": "concurrent",
+      "seed": 1,
+      "agent": "llm_single_shot",
+      "onset": 507,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 33,
+      "mttr": null,
+      "root_cause_correct": false,
+      "root_cause_recall": 0.5,
+      "recovered": false,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 33,
+          "action": "rollback_service",
+          "params": {
+            "service": "invoice-agent"
+          }
+        },
+        {
+          "ts": 33,
+          "action": "resync_ledger",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "invoice-agent",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [
+        "I4_workflow_progress"
+      ],
+      "cost_usd": 0.00616,
+      "llm_calls": 1,
+      "success": false
+    },
+    {
+      "scenario": "val_two_dev_faults",
+      "split": "validation",
+      "family": "concurrent",
+      "seed": 2,
+      "agent": "llm_single_shot",
+      "onset": 488,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 22,
+      "mttr": null,
+      "root_cause_correct": false,
+      "root_cause_recall": 0.5,
+      "recovered": false,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 22,
+          "action": "rollback_service",
+          "params": {
+            "service": "invoice-agent"
+          }
+        },
+        {
+          "ts": 22,
+          "action": "resync_ledger",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "invoice-agent",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [
+        "I4_workflow_progress"
+      ],
+      "cost_usd": 0.00606,
+      "llm_calls": 1,
+      "success": false
+    },
+    {
+      "scenario": "val_two_dev_faults",
+      "split": "validation",
+      "family": "concurrent",
+      "seed": 3,
+      "agent": "llm_single_shot",
+      "onset": 426,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 24,
+      "mttr": null,
+      "root_cause_correct": false,
+      "root_cause_recall": 0.5,
+      "recovered": false,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 24,
+          "action": "rollback_service",
+          "params": {
+            "service": "invoice-agent"
+          }
+        },
+        {
+          "ts": 24,
+          "action": "resync_ledger",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "invoice-agent",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [
+        "I4_workflow_progress"
+      ],
+      "cost_usd": 0.00602,
+      "llm_calls": 1,
+      "success": false
+    },
+    {
+      "scenario": "val_stuck_worker_no_deploy",
+      "split": "validation",
+      "family": "early_ack",
+      "seed": 1,
+      "agent": "llm_single_shot",
+      "onset": 430,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 150,
+      "mttr": 150,
+      "root_cause_correct": false,
+      "root_cause_recall": 0.0,
+      "recovered": true,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 150,
+          "action": "restart_service",
+          "params": {
+            "service": "worker"
+          }
+        },
+        {
+          "ts": 150,
+          "action": "requeue_orphaned_orders",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "worker",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [],
+      "cost_usd": 0.00602,
+      "llm_calls": 1,
+      "success": false
+    },
+    {
+      "scenario": "val_stuck_worker_no_deploy",
+      "split": "validation",
+      "family": "early_ack",
+      "seed": 2,
+      "agent": "llm_single_shot",
+      "onset": 444,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 146,
+      "mttr": 146,
+      "root_cause_correct": false,
+      "root_cause_recall": 0.0,
+      "recovered": true,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 146,
+          "action": "restart_service",
+          "params": {
+            "service": "worker"
+          }
+        },
+        {
+          "ts": 146,
+          "action": "requeue_orphaned_orders",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "worker",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [],
+      "cost_usd": 0.00598,
+      "llm_calls": 1,
+      "success": false
+    },
+    {
+      "scenario": "val_stuck_worker_no_deploy",
+      "split": "validation",
+      "family": "early_ack",
+      "seed": 3,
+      "agent": "llm_single_shot",
+      "onset": 504,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 146,
+      "mttr": 146,
+      "root_cause_correct": false,
+      "root_cause_recall": 0.0,
+      "recovered": true,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 146,
+          "action": "restart_service",
+          "params": {
+            "service": "worker"
+          }
+        },
+        {
+          "ts": 146,
+          "action": "requeue_orphaned_orders",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "worker",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [],
+      "cost_usd": 0.00603,
+      "llm_calls": 1,
+      "success": false
+    },
+    {
+      "scenario": "val_supplier_outage",
+      "split": "validation",
+      "family": "callback_lost",
+      "seed": 1,
+      "agent": "llm_single_shot",
+      "onset": 464,
+      "fixable": false,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 306,
+      "mttr": null,
+      "root_cause_correct": false,
+      "root_cause_recall": 0.0,
+      "recovered": null,
+      "escalated": true,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 306,
+          "action": "rerequest_supplier_approvals",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "workflow",
+          "kind": "external_dependency"
+        }
+      ],
+      "final_violations": [],
+      "cost_usd": 0.00573,
+      "llm_calls": 1,
+      "success": false
+    },
+    {
+      "scenario": "val_supplier_outage",
+      "split": "validation",
+      "family": "callback_lost",
+      "seed": 2,
+      "agent": "llm_single_shot",
+      "onset": 441,
+      "fixable": false,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 309,
+      "mttr": null,
+      "root_cause_correct": false,
+      "root_cause_recall": 0.0,
+      "recovered": null,
+      "escalated": true,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 309,
+          "action": "rerequest_supplier_approvals",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "workflow",
+          "kind": "external_dependency"
+        }
+      ],
+      "final_violations": [],
+      "cost_usd": 0.00533,
+      "llm_calls": 1,
+      "success": false
+    },
+    {
+      "scenario": "val_supplier_outage",
+      "split": "validation",
+      "family": "callback_lost",
+      "seed": 3,
+      "agent": "llm_single_shot",
+      "onset": 439,
+      "fixable": false,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 301,
+      "mttr": null,
+      "root_cause_correct": false,
+      "root_cause_recall": 0.0,
+      "recovered": null,
+      "escalated": true,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 301,
+          "action": "rerequest_supplier_approvals",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "workflow",
+          "kind": "external_dependency"
+        }
+      ],
+      "final_violations": [],
+      "cost_usd": 0.00553,
+      "llm_calls": 1,
+      "success": false
+    }
+  ]
+}

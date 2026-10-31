@@ -1,0 +1,3254 @@
+{
+  "split": "validation",
+  "agent": "raqib_no_ledger",
+  "seeds": [
+    1
+  ],
+  "summary": {
+    "runs": 10,
+    "success_rate": 70.0,
+    "clean_success_rate": 70.0,
+    "detection_rate": 100.0,
+    "false_alarms": 0,
+    "root_cause_accuracy": 70.0,
+    "recovery_rate": 75.0,
+    "escalation_accuracy": 70.0,
+    "harmful_actions": 0,
+    "unnecessary_actions": 6,
+    "mean_mttd_s": 118.9,
+    "mean_mttr_s": 138.8,
+    "cost_usd": 0.0123,
+    "evidence_cited": 46,
+    "evidence_validity": 100.0,
+    "recovery_claims": 10,
+    "false_recovery_claims": 0,
+    "false_failure_claims": 0
+  },
+  "runs": [
+    {
+      "scenario": "val_payment_swallow",
+      "split": "validation",
+      "family": "payment_swallow",
+      "seed": 1,
+      "agent": "raqib_no_ledger",
+      "onset": 528,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 122,
+      "mttr": 122,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": true,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 122,
+          "action": "rollback_service",
+          "params": {
+            "service": "payment-service"
+          }
+        },
+        {
+          "ts": 122,
+          "action": "replay_payment_confirmations",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "payment-service",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [],
+      "stable": true,
+      "recovery_claim": true,
+      "false_recovery_claim": false,
+      "false_failure_claim": false,
+      "evidence_cited": 3,
+      "evidence_valid": 3,
+      "invalid_evidence": [],
+      "timeline": [
+        {
+          "t": 650,
+          "event": "incident",
+          "signals": [
+            "I1_payment_has_order"
+          ]
+        },
+        {
+          "t": 650,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "logs",
+              "service": "payment-service",
+              "level": "ERROR",
+              "contains": "order not found",
+              "why": "Check if payment-service is failing to find orders due to a recent deploy change"
+            },
+            {
+              "tool": "sql",
+              "query": "SELECT p.id, p.order_id, p.created_at, o.id, o.status, o.created_at FROM payments p LEFT JOIN orders o ON p.order_id = o.id WHERE o.id IS NULL OR o.status != 'confirmed'",
+              "why": "Identify the specific payments violating I1_payment_has_order to understand if orders are missing or not confirmed"
+            }
+          ],
+          "evidence": [
+            "E10 [logs] (payment-service) log search service=payment-service level=ERROR contains='order not found': 0 records; latest: []",
+            "E11 [database] (order-service, payment-service, worker, workflow) SQL `SELECT p.id, p.order_id, p.created_at, o.id, o.status, o.created_at FROM payments p LEFT JOIN orders o ON p.order_id = o.id WHERE o.id IS NULL OR o.status != 'confirmed'` returned 20+ rows: [{\"id\": \"1\", \"order_id\": \"ORD-00001\", \"created_at\": \"1\", \"status\": \"fulfilled\"}, {\"id\": \"2\", \"order_id\": \"ORD-00002\", \"created_at\": \"1\", \"status\": \"fulfilled\"}, {\"id\": \"3\", \"order_id\": \"ORD-00003\", \"created_at\": \"2\", \"status\": \"fulfilled\"}, {\"id\": \"4\", \"order_id\": \"ORD-00004\", \"created_at\": \"3\", \"status\": \"fulfilled\"}, {\"id\": \"5\", \"order_id\": \"ORD-00005\", \"created_at\": \"3\", \"status\": \"fulfilled\"}, {\"id\": \"6\", \"order_id\": \"ORD-00006\", \"created_at\": \"4\", \"status\": \"fulfilled\"}, {\"id\": \"7\", \"order_id\": \"ORD-00007\", \"created_at\": \"4\", \"status\": \"fulfilled\"}, {\"id\": \"8\", \"order_id\": \"ORD-00008\",..."
+          ],
+          "notes": []
+        },
+        {
+          "t": 650,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT id, order_id, created_at, status FROM payments WHERE created_at >= :now - 300 AND status = 'captured' AND order_id NOT IN (SELECT id FROM orders WHERE status = 'confirmed')",
+              "why": "Find payments created during the incident window that lack a confirmed order, to pinpoint timing and scope"
+            }
+          ],
+          "evidence": [
+            "E12 [database] (order-service, payment-service, worker, workflow) SQL `SELECT id, order_id, created_at, status FROM payments WHERE created_at >= :now - 300 AND status = 'captured' AND order_id NOT IN (SELECT id FROM orders WHERE status = 'confirmed')` returned 20+ rows: [{\"id\": \"684\", \"order_id\": \"ORD-00684\", \"created_at\": \"350\", \"status\": \"captured\"}, {\"id\": \"685\", \"order_id\": \"ORD-00685\", \"created_at\": \"350\", \"status\": \"captured\"}, {\"id\": \"686\", \"order_id\": \"ORD-00686\", \"created_at\": \"351\", \"status\": \"captured\"}, {\"id\": \"687\", \"order_id\": \"ORD-00687\", \"created_at\": \"351\", \"status\": \"captured\"}, {\"id\": \"688\", \"order_id\": \"ORD-00688\", \"created_at\": \"352\", \"status\": \"captured\"}, {\"id\": \"689\", \"order_id\": \"ORD-00689\", \"created_at\": \"352\", \"status\": \"captured\"}, {\"id\": \"690\", \"order_id\": \"ORD-00690\", \"created_at\": \"353\", \"status\": \"captured\"}, {\"id\": \"691\", \"..."
+          ],
+          "notes": []
+        },
+        {
+          "t": 650,
+          "event": "hypotheses",
+          "round": 1,
+          "summary": "A bad deploy of payment-service caused payments to be captured without confirmed orders, requiring rollback and data repair.",
+          "verdicts": [
+            {
+              "service": "payment-service",
+              "kind": "bad_deploy",
+              "proven": true,
+              "sources": [
+                "database",
+                "deploys"
+              ],
+              "supporting": [
+                "E1",
+                "E4",
+                "E12"
+              ],
+              "refuting": [
+                "E10"
+              ],
+              "problems": [],
+              "mechanism": "The deploy of payment-service v1.1 at t=527 introduced a fault in the webhook handler that captures payments without ensuring the corresponding order is confirmed, violating invariant I1_payment_has_order."
+            }
+          ],
+          "evidence": {
+            "E1": {
+              "source": "database",
+              "claim": "invariant I1_payment_has_order violated by 1 rows: Every captured payment has a confirmed order within 2 minutes",
+              "call": "T76"
+            },
+            "E4": {
+              "source": "deploys",
+              "claim": "deploy payment-service v1.1 at t=527 (123 s before the first anomaly, t=650): \"simplify webhook handler\"",
+              "call": "T79"
+            },
+            "E10": {
+              "source": "logs",
+              "claim": "log search service=payment-service level=ERROR contains='order not found': 0 records; latest: []",
+              "call": "T81"
+            },
+            "E12": {
+              "source": "database",
+              "claim": "SQL `SELECT id, order_id, created_at, status FROM payments WHERE created_at >= :now - 300 AND status = 'captured' AND order_id NOT IN (SELECT id FROM orders WHERE status = 'confirmed')` returned 20+ rows: [{\"id\": \"684\", \"order_id\": \"ORD-00684\", \"created_at\": \"350\", \"status\": \"captured\"}, {\"id\": \"685\", \"order_id\": \"ORD-00685\", \"created_at\": \"350\", \"status\": \"captured\"}, {\"id\": \"686\", \"order_id\": \"ORD-00686\", \"created_at\": \"351\", \"status\": \"captured\"}, {\"id\": \"687\", \"order_id\": \"ORD-00687\", \"created_at\": \"351\", \"status\": \"captured\"}, {\"id\": \"688\", \"order_id\": \"ORD-00688\", \"created_at\": \"352\", \"status\": \"captured\"}, {\"id\": \"689\", \"order_id\": \"ORD-00689\", \"created_at\": \"352\", \"status\": \"captured\"}, {\"id\": \"690\", \"order_id\": \"ORD-00690\", \"created_at\": \"353\", \"status\": \"captured\"}, {\"id\": \"691\", \"...",
+              "call": "T83"
+            }
+          }
+        },
+        {
+          "t": 650,
+          "event": "action",
+          "action": "rollback_service",
+          "params": {
+            "service": "payment-service"
+          },
+          "result": {
+            "ok": true,
+            "service": "payment-service",
+            "from": "v1.1",
+            "to": "v1.0"
+          }
+        },
+        {
+          "t": 650,
+          "event": "action",
+          "action": "replay_payment_confirmations",
+          "params": {},
+          "result": {
+            "ok": true,
+            "confirmed": 24
+          }
+        },
+        {
+          "t": 980,
+          "event": "stable",
+          "window": 330
+        },
+        {
+          "t": 980,
+          "event": "report",
+          "root_causes": [
+            {
+              "service": "payment-service",
+              "kind": "bad_deploy"
+            }
+          ],
+          "evidence": [
+            "T76",
+            "T79",
+            "T83"
+          ],
+          "actions": [
+            "t=650: rollback_service {'service': 'payment-service'} -> {'ok': True, 'service': 'payment-service', 'from': 'v1.1', 'to': 'v1.0'}",
+            "t=650: replay_payment_confirmations  -> {'ok': True, 'confirmed': 24}"
+          ],
+          "escalated": false,
+          "recovered": true,
+          "reason": "stable for 330 s: every check clean"
+        }
+      ],
+      "cost_usd": 0.0,
+      "llm_calls": 3,
+      "success": true
+    },
+    {
+      "scenario": "val_queue_early_ack",
+      "split": "validation",
+      "family": "early_ack",
+      "seed": 1,
+      "agent": "raqib_no_ledger",
+      "onset": 500,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 220,
+      "mttr": 220,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": true,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 220,
+          "action": "rollback_service",
+          "params": {
+            "service": "worker"
+          }
+        },
+        {
+          "ts": 220,
+          "action": "requeue_orphaned_orders",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "worker",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [],
+      "stable": true,
+      "recovery_claim": true,
+      "false_recovery_claim": false,
+      "false_failure_claim": false,
+      "evidence_cited": 4,
+      "evidence_valid": 4,
+      "invalid_evidence": [],
+      "timeline": [
+        {
+          "t": 720,
+          "event": "incident",
+          "signals": [
+            "I2_no_orphaned_orders"
+          ]
+        },
+        {
+          "t": 720,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "logs",
+              "service": "worker",
+              "level": "ERROR",
+              "contains": null,
+              "why": "Check for worker errors that could explain the restarts and queue processing issues, to distinguish between a bad deploy and resource exhaustion."
+            },
+            {
+              "tool": "sql",
+              "query": "SELECT service, COUNT(*) as open_sessions FROM db_sessions WHERE open = 1 GROUP BY service;",
+              "why": "Check for database connection exhaustion, which could cause worker restarts and queue buildup if worker depends on database."
+            }
+          ],
+          "evidence": [
+            "E30 [logs] (worker) log search service=worker level=ERROR contains='': 0 records; latest: []",
+            "E31 [database] (database, order-service, payment-service, sync-job, worker, workflow) SQL `SELECT service, COUNT(*) as open_sessions FROM db_sessions WHERE open = 1 GROUP BY service` returned 5 rows: [{\"service\": \"order-service\", \"open_sessions\": \"1\"}, {\"service\": \"payment-service\", \"open_sessions\": \"1\"}, {\"service\": \"sync-job\", \"open_sessions\": \"1\"}, {\"service\": \"worker\", \"open_sessions\": \"1\"}, {\"service\": \"workflow\", \"open_sessions\": \"1\"}]"
+          ],
+          "notes": []
+        },
+        {
+          "t": 720,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT COUNT(*) as total_messages, COUNT(CASE WHEN state = 'processing' THEN 1 END) as processing_messages FROM messages;",
+              "why": "Check if messages are stuck in 'processing' state due to worker restarts, which would explain orphaned orders and queue depth."
+            }
+          ],
+          "evidence": [
+            "E32 [database] (order-service, queue, worker) SQL `SELECT COUNT(*) as total_messages, COUNT(CASE WHEN state = 'processing' THEN 1 END) as processing_messages FROM messages` returned 1 rows: [{\"total_messages\": \"2704\", \"processing_messages\": \"0\"}]"
+          ],
+          "notes": []
+        },
+        {
+          "t": 720,
+          "event": "hypotheses",
+          "round": 1,
+          "summary": "Worker deploy v1.1 caused restarts and processing stalls, leading to orphaned orders.",
+          "verdicts": [
+            {
+              "service": "worker",
+              "kind": "bad_deploy",
+              "proven": true,
+              "sources": [
+                "deploys",
+                "logs",
+                "metrics"
+              ],
+              "supporting": [
+                "E10",
+                "E11",
+                "E12",
+                "E13"
+              ],
+              "refuting": [
+                "E30",
+                "E31",
+                "E32"
+              ],
+              "problems": [],
+              "mechanism": "Deploy v1.1 at t=499 introduced a fault causing frequent restarts (health check failures), leading to messages not being processed and queue depth increase."
+            }
+          ],
+          "evidence": {
+            "E10": {
+              "source": "metrics",
+              "claim": "queue_depth rose above its baseline (max 0) at t=600, peak 697 at t=680, now 459",
+              "call": "T91"
+            },
+            "E11": {
+              "source": "metrics",
+              "claim": "worker_restarts rate rose from 0.00/s (baseline) starting t=600, peak 2.05/s at t=650, now 1.93/s",
+              "call": "T91"
+            },
+            "E12": {
+              "source": "logs",
+              "claim": "INFO worker \"worker process restarted\" (reason=health check): 253 times, first t=593, last t=720, never seen in the baseline",
+              "call": "T92"
+            },
+            "E13": {
+              "source": "deploys",
+              "claim": "deploy worker v1.1 at t=499 (94 s before the first anomaly, t=593): \"faster message acknowledgement\"",
+              "call": "T93"
+            },
+            "E30": {
+              "source": "logs",
+              "claim": "log search service=worker level=ERROR contains='': 0 records; latest: []",
+              "call": "T95"
+            },
+            "E31": {
+              "source": "database",
+              "claim": "SQL `SELECT service, COUNT(*) as open_sessions FROM db_sessions WHERE open = 1 GROUP BY service` returned 5 rows: [{\"service\": \"order-service\", \"open_sessions\": \"1\"}, {\"service\": \"payment-service\", \"open_sessions\": \"1\"}, {\"service\": \"sync-job\", \"open_sessions\": \"1\"}, {\"service\": \"worker\", \"open_sessions\": \"1\"}, {\"service\": \"workflow\", \"open_sessions\": \"1\"}]",
+              "call": "T96"
+            },
+            "E32": {
+              "source": "database",
+              "claim": "SQL `SELECT COUNT(*) as total_messages, COUNT(CASE WHEN state = 'processing' THEN 1 END) as processing_messages FROM messages` returned 1 rows: [{\"total_messages\": \"2704\", \"processing_messages\": \"0\"}]",
+              "call": "T97"
+            }
+          }
+        },
+        {
+          "t": 720,
+          "event": "action",
+          "action": "rollback_service",
+          "params": {
+            "service": "worker"
+          },
+          "result": {
+            "ok": true,
+            "service": "worker",
+            "from": "v1.1",
+            "to": "v1.0"
+          }
+        },
+        {
+          "t": 720,
+          "event": "action",
+          "action": "requeue_orphaned_orders",
+          "params": {},
+          "result": {
+            "ok": true,
+            "requeued": 253
+          }
+        },
+        {
+          "t": 1050,
+          "event": "stable",
+          "window": 330
+        },
+        {
+          "t": 1050,
+          "event": "report",
+          "root_causes": [
+            {
+              "service": "worker",
+              "kind": "bad_deploy"
+            }
+          ],
+          "evidence": [
+            "T91",
+            "T91",
+            "T92",
+            "T93"
+          ],
+          "actions": [
+            "t=720: rollback_service {'service': 'worker'} -> {'ok': True, 'service': 'worker', 'from': 'v1.1', 'to': 'v1.0'}",
+            "t=720: requeue_orphaned_orders  -> {'ok': True, 'requeued': 253}"
+          ],
+          "escalated": false,
+          "recovered": true,
+          "reason": "stable for 330 s: every check clean"
+        }
+      ],
+      "cost_usd": 0.0,
+      "llm_calls": 3,
+      "success": true
+    },
+    {
+      "scenario": "val_invoice_swap",
+      "split": "validation",
+      "family": "invoice_swap",
+      "seed": 1,
+      "agent": "raqib_no_ledger",
+      "onset": 481,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 19,
+      "mttr": 19,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": true,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 19,
+          "action": "rollback_service",
+          "params": {
+            "service": "invoice-agent"
+          }
+        },
+        {
+          "ts": 19,
+          "action": "resync_ledger",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "invoice-agent",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [],
+      "stable": true,
+      "recovery_claim": true,
+      "false_recovery_claim": false,
+      "false_failure_claim": false,
+      "evidence_cited": 3,
+      "evidence_valid": 3,
+      "invalid_evidence": [],
+      "timeline": [
+        {
+          "t": 500,
+          "event": "incident",
+          "signals": [
+            "I3_ledger_integrity"
+          ]
+        },
+        {
+          "t": 500,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT order_id, amount, vat, total FROM ledger WHERE vat != amount * 0.15 OR total != amount + vat",
+              "why": "Identify the specific ledger rows violating the VAT calculation to understand the nature of the error"
+            },
+            {
+              "tool": "logs",
+              "service": "invoice-agent",
+              "level": "ERROR",
+              "contains": "extraction",
+              "why": "Check for errors related to the new extraction model deployed at t=480 that might explain incorrect VAT calculations"
+            }
+          ],
+          "evidence": [
+            "E8 [database] (sync-job) SQL `SELECT order_id, amount, vat, total FROM ledger WHERE vat != amount * 0.15 OR total != amount + vat` returned 20+ rows: [{\"order_id\": \"ORD-00001\", \"amount\": \"3964.74\", \"vat\": \"594.71\", \"total\": \"4559.45\"}, {\"order_id\": \"ORD-00002\", \"amount\": \"2490.5\", \"vat\": \"373.57\", \"total\": \"2864.07\"}, {\"order_id\": \"ORD-00003\", \"amount\": \"4516.99\", \"vat\": \"677.55\", \"total\": \"5194.54\"}, {\"order_id\": \"ORD-00004\", \"amount\": \"2685.38\", \"vat\": \"402.81\", \"total\": \"3088.19\"}, {\"order_id\": \"ORD-00005\", \"amount\": \"4701.92\", \"vat\": \"705.29\", \"total\": \"5407.21\"}, {\"order_id\": \"ORD-00006\", \"amount\": \"1010.94\", \"vat\": \"151.64\", \"total\": \"1162.58\"}, {\"order_id\": \"ORD-00007\", \"amount\": \"692.36\", \"vat\": \"103.85\", \"total\": \"796.21\"}, {\"or...",
+            "E9 [logs] (invoice-agent) log search service=invoice-agent level=ERROR contains='extraction': 0 records; latest: []"
+          ],
+          "notes": []
+        },
+        {
+          "t": 500,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT i.order_id, i.amount, i.vat, i.total, l.amount, l.vat, l.total FROM invoices i JOIN ledger l ON i.order_id = l.order_id WHERE l.vat != l.amount * 0.15 OR l.total != l.amount + l.vat LIMIT 5",
+              "why": "Compare invoice table values with ledger values to determine if the error originates during extraction (invoice-agent) or during sync (sync-job)"
+            }
+          ],
+          "evidence": [
+            "E10 [database] (invoice-agent, sync-job, worker) SQL `SELECT i.order_id, i.amount, i.vat, i.total, l.amount, l.vat, l.total FROM invoices i JOIN ledger l ON i.order_id = l.order_id WHERE l.vat != l.amount * 0.15 OR l.total != l.amount + l.vat LIMIT 5` returned 5 rows: [{\"order_id\": \"ORD-00001\", \"amount\": \"3964.74\", \"vat\": \"594.71\", \"total\": \"4559.45\"}, {\"order_id\": \"ORD-00002\", \"amount\": \"2490.5\", \"vat\": \"373.57\", \"total\": \"2864.07\"}, {\"order_id\": \"ORD-00003\", \"amount\": \"4516.99\", \"vat\": \"677.55\", \"total\": \"5194.54\"}, {\"order_id\": \"ORD-00004\", \"amount\": \"2685.38\", \"vat\": \"402.81\", \"total\": \"3088.19\"}, {\"order_id\": \"ORD-00005\", \"amount\": \"4701.92\", \"vat\": \"705.29\", \"total\": \"5407.21\"}]"
+          ],
+          "notes": []
+        },
+        {
+          "t": 500,
+          "event": "hypotheses",
+          "round": 1,
+          "summary": "A bad deploy of invoice-agent introduced incorrect VAT calculations that propagated to the ledger",
+          "verdicts": [
+            {
+              "service": "invoice-agent",
+              "kind": "bad_deploy",
+              "proven": true,
+              "sources": [
+                "database",
+                "deploys"
+              ],
+              "supporting": [
+                "E1",
+                "E3",
+                "E10"
+              ],
+              "refuting": [
+                "E4",
+                "E9"
+              ],
+              "problems": [
+                "E8 is not about invoice-agent or a service that depends on it"
+              ],
+              "mechanism": "The deploy of invoice-agent v1.1 at t=480 introduced a faulty extraction model that incorrectly calculates VAT and total amounts when creating invoices, which are then synced to the ledger"
+            }
+          ],
+          "evidence": {
+            "E1": {
+              "source": "database",
+              "claim": "invariant I3_ledger_integrity violated by 1 rows: Ledger rows respect VAT = 15% of amount and total = amount + VAT",
+              "call": "T46"
+            },
+            "E3": {
+              "source": "deploys",
+              "claim": "deploy invoice-agent v1.1 at t=480 (20 s before the first anomaly, t=500): \"switch extraction model\"",
+              "call": "T49"
+            },
+            "E4": {
+              "source": "deploys",
+              "claim": "no deploy of sync-job since t=0",
+              "call": "T49"
+            },
+            "E9": {
+              "source": "logs",
+              "claim": "log search service=invoice-agent level=ERROR contains='extraction': 0 records; latest: []",
+              "call": "T52"
+            },
+            "E10": {
+              "source": "database",
+              "claim": "SQL `SELECT i.order_id, i.amount, i.vat, i.total, l.amount, l.vat, l.total FROM invoices i JOIN ledger l ON i.order_id = l.order_id WHERE l.vat != l.amount * 0.15 OR l.total != l.amount + l.vat LIMIT 5` returned 5 rows: [{\"order_id\": \"ORD-00001\", \"amount\": \"3964.74\", \"vat\": \"594.71\", \"total\": \"4559.45\"}, {\"order_id\": \"ORD-00002\", \"amount\": \"2490.5\", \"vat\": \"373.57\", \"total\": \"2864.07\"}, {\"order_id\": \"ORD-00003\", \"amount\": \"4516.99\", \"vat\": \"677.55\", \"total\": \"5194.54\"}, {\"order_id\": \"ORD-00004\", \"amount\": \"2685.38\", \"vat\": \"402.81\", \"total\": \"3088.19\"}, {\"order_id\": \"ORD-00005\", \"amount\": \"4701.92\", \"vat\": \"705.29\", \"total\": \"5407.21\"}]",
+              "call": "T53"
+            }
+          }
+        },
+        {
+          "t": 500,
+          "event": "action",
+          "action": "rollback_service",
+          "params": {
+            "service": "invoice-agent"
+          },
+          "result": {
+            "ok": true,
+            "service": "invoice-agent",
+            "from": "v1.1",
+            "to": "v1.0"
+          }
+        },
+        {
+          "t": 500,
+          "event": "action",
+          "action": "resync_ledger",
+          "params": {},
+          "result": {
+            "ok": true,
+            "fixed": 1
+          }
+        },
+        {
+          "t": 830,
+          "event": "stable",
+          "window": 330
+        },
+        {
+          "t": 830,
+          "event": "report",
+          "root_causes": [
+            {
+              "service": "invoice-agent",
+              "kind": "bad_deploy"
+            }
+          ],
+          "evidence": [
+            "T46",
+            "T49",
+            "T53"
+          ],
+          "actions": [
+            "t=500: rollback_service {'service': 'invoice-agent'} -> {'ok': True, 'service': 'invoice-agent', 'from': 'v1.1', 'to': 'v1.0'}",
+            "t=500: resync_ledger  -> {'ok': True, 'fixed': 1}"
+          ],
+          "escalated": false,
+          "recovered": true,
+          "reason": "stable for 330 s: every check clean"
+        }
+      ],
+      "cost_usd": 0.0,
+      "llm_calls": 3,
+      "success": true
+    },
+    {
+      "scenario": "val_callback_lost",
+      "split": "validation",
+      "family": "callback_lost",
+      "seed": 1,
+      "agent": "raqib_no_ledger",
+      "onset": 514,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 306,
+      "mttr": 306,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": true,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 306,
+          "action": "rollback_service",
+          "params": {
+            "service": "workflow"
+          }
+        },
+        {
+          "ts": 306,
+          "action": "rerequest_supplier_approvals",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "workflow",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [],
+      "stable": true,
+      "recovery_claim": true,
+      "false_recovery_claim": false,
+      "false_failure_claim": false,
+      "evidence_cited": 2,
+      "evidence_valid": 2,
+      "invalid_evidence": [],
+      "timeline": [
+        {
+          "t": 820,
+          "event": "incident",
+          "signals": [
+            "I4_workflow_progress"
+          ]
+        },
+        {
+          "t": 820,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "logs",
+              "service": "workflow",
+              "level": "ERROR",
+              "contains": "supplier-api",
+              "why": "Check if workflow is failing to communicate with supplier-api, which would explain approval delays"
+            },
+            {
+              "tool": "sql",
+              "query": "SELECT COUNT(*) FROM approvals WHERE resolved_at IS NULL AND callback_due < :now - 300 AND requested_at < :now - 300",
+              "why": "Confirm the number and timing of overdue approval requests to see if they align with the deploy or external issue"
+            }
+          ],
+          "evidence": [
+            "E8 [logs] (workflow) log search service=workflow level=ERROR contains='supplier-api': 0 records; latest: []",
+            "E9 [database] (workflow) SQL `SELECT COUNT(*) FROM approvals WHERE resolved_at IS NULL AND callback_due < :now - 300 AND requested_at < :now - 300` returned 1 rows: [{\"COUNT(*)\": \"0\"}]"
+          ],
+          "notes": []
+        },
+        {
+          "t": 820,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT order_id, requested_at, callback_due, resolved_at FROM approvals WHERE resolved_at IS NULL AND callback_due < :now ORDER BY requested_at LIMIT 10",
+              "why": "Examine the overdue approval requests to understand their timing and see if they correlate with the workflow deploy at t=513"
+            }
+          ],
+          "evidence": [
+            "E10 [database] (workflow) SQL `SELECT order_id, requested_at, callback_due, resolved_at FROM approvals WHERE resolved_at IS NULL AND callback_due < :now ORDER BY requested_at LIMIT 10` returned 0 rows: []"
+          ],
+          "notes": []
+        },
+        {
+          "t": 820,
+          "event": "hypotheses",
+          "round": 1,
+          "summary": "Workflow deploy v1.1 caused approval delays, requiring rollback and re-request of approvals.",
+          "verdicts": [
+            {
+              "service": "workflow",
+              "kind": "bad_deploy",
+              "proven": true,
+              "sources": [
+                "database",
+                "deploys"
+              ],
+              "supporting": [
+                "E1",
+                "E4"
+              ],
+              "refuting": [
+                "E8"
+              ],
+              "problems": [],
+              "mechanism": "The deploy of workflow v1.1 at t=513 introduced a fault in approval routing, causing delays in supplier approval requests without logging errors."
+            }
+          ],
+          "evidence": {
+            "E1": {
+              "source": "database",
+              "claim": "invariant I4_workflow_progress violated by 3 rows: No paid order waits for supplier approval longer than 5 minutes",
+              "call": "T110"
+            },
+            "E4": {
+              "source": "deploys",
+              "claim": "deploy workflow v1.1 at t=513 (307 s before the first anomaly, t=820): \"new approval routing\"",
+              "call": "T113"
+            },
+            "E8": {
+              "source": "logs",
+              "claim": "log search service=workflow level=ERROR contains='supplier-api': 0 records; latest: []",
+              "call": "T115"
+            }
+          }
+        },
+        {
+          "t": 820,
+          "event": "action",
+          "action": "rollback_service",
+          "params": {
+            "service": "workflow"
+          },
+          "result": {
+            "ok": true,
+            "service": "workflow",
+            "from": "v1.1",
+            "to": "v1.0"
+          }
+        },
+        {
+          "t": 820,
+          "event": "action",
+          "action": "rerequest_supplier_approvals",
+          "params": {},
+          "result": {
+            "ok": true,
+            "rerequested": 157
+          }
+        },
+        {
+          "t": 1150,
+          "event": "stable",
+          "window": 330
+        },
+        {
+          "t": 1150,
+          "event": "report",
+          "root_causes": [
+            {
+              "service": "workflow",
+              "kind": "bad_deploy"
+            }
+          ],
+          "evidence": [
+            "T110",
+            "T113"
+          ],
+          "actions": [
+            "t=820: rollback_service {'service': 'workflow'} -> {'ok': True, 'service': 'workflow', 'from': 'v1.1', 'to': 'v1.0'}",
+            "t=820: rerequest_supplier_approvals  -> {'ok': True, 'rerequested': 157}"
+          ],
+          "escalated": false,
+          "recovered": true,
+          "reason": "stable for 330 s: every check clean"
+        }
+      ],
+      "cost_usd": 0.0,
+      "llm_calls": 3,
+      "success": true
+    },
+    {
+      "scenario": "val_retry_loop",
+      "split": "validation",
+      "family": "agent_retry_loop",
+      "seed": 1,
+      "agent": "raqib_no_ledger",
+      "onset": 514,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 16,
+      "mttr": 16,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": true,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 16,
+          "action": "rollback_service",
+          "params": {
+            "service": "worker"
+          }
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "worker",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [],
+      "stable": true,
+      "recovery_claim": true,
+      "false_recovery_claim": false,
+      "false_failure_claim": false,
+      "evidence_cited": 4,
+      "evidence_valid": 4,
+      "invalid_evidence": [],
+      "timeline": [
+        {
+          "t": 530,
+          "event": "incident",
+          "signals": [
+            "I6_retry_budget"
+          ]
+        },
+        {
+          "t": 530,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "logs",
+              "service": "worker",
+              "level": "ERROR",
+              "contains": "unexpected invoice layout",
+              "why": "Confirm if this error started exactly at t=515 and if it's the only error causing retries"
+            },
+            {
+              "tool": "sql",
+              "query": "SELECT COUNT(*) FROM messages WHERE attempts > 3 AND updated_at >= :now - 30",
+              "why": "Count messages currently exceeding retry budget to understand violation severity"
+            }
+          ],
+          "evidence": [
+            "E12 [logs] (worker) log search service=worker level=ERROR contains='unexpected invoice layout': 0 records; latest: []",
+            "E13 [database] (order-service, queue, worker) SQL `SELECT COUNT(*) FROM messages WHERE attempts > 3 AND updated_at >= :now - 30` returned 1 rows: [{\"COUNT(*)\": \"4\"}]"
+          ],
+          "notes": []
+        },
+        {
+          "t": 530,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT order_id, invoice_text FROM orders JOIN messages ON orders.id = messages.order_id WHERE messages.attempts > 3 AND messages.updated_at >= :now - 30",
+              "why": "Examine the invoice text causing retries to determine if it's a new format or malformed data"
+            }
+          ],
+          "evidence": [
+            "E14 [database] (order-service, payment-service, queue, worker, workflow) SQL `SELECT order_id, invoice_text FROM orders JOIN messages ON orders.id = messages.order_id WHERE messages.attempts > 3 AND messages.updated_at >= :now - 30` returned 4 rows: [{\"order_id\": \"ORD-01024\", \"invoice_text\": \"Supplier: Red Sea Parts Invoice for ORD-01024 Amount: 368...\"}, {\"order_id\": \"ORD-01031\", \"invoice_text\": \"Supplier: Red Sea Parts Invoice for ORD-01031 Amount: 624...\"}, {\"order_id\": \"ORD-01034\", \"invoice_text\": \"Supplier: Red Sea Parts Invoice for ORD-01034 Amount: 385...\"}, {\"order_id\": \"ORD-01039\", \"invoice_text\": \"Supplier: Red Sea Parts Invoice for ORD-01039 Amount: 449...\"}]"
+          ],
+          "notes": []
+        },
+        {
+          "t": 530,
+          "event": "hypotheses",
+          "round": 1,
+          "summary": "Worker deploy v1.1 broke invoice extraction for Red Sea Parts format, causing retry budget violations",
+          "verdicts": [
+            {
+              "service": "worker",
+              "kind": "bad_deploy",
+              "proven": true,
+              "sources": [
+                "database",
+                "deploys",
+                "logs",
+                "metrics"
+              ],
+              "supporting": [
+                "E3",
+                "E4",
+                "E5",
+                "E13"
+              ],
+              "refuting": [
+                "E6"
+              ],
+              "problems": [],
+              "mechanism": "Deploy v1.1 at t=513 introduced a change that broke invoice extraction for Red Sea Parts invoices, causing retries and budget violations"
+            }
+          ],
+          "evidence": {
+            "E3": {
+              "source": "metrics",
+              "claim": "messages_retried rate rose from 0.00/s (baseline) starting t=520, peak 0.43/s at t=530, now 0.43/s",
+              "call": "T53"
+            },
+            "E4": {
+              "source": "logs",
+              "claim": "WARN worker \"retrying message\" (error=extraction failed: unexpected invoice layout): 26 times, first t=515, last t=530, never seen in the baseline",
+              "call": "T54"
+            },
+            "E5": {
+              "source": "deploys",
+              "claim": "deploy worker v1.1 at t=513 (2 s before the first anomaly, t=515): \"retry tuning\"",
+              "call": "T55"
+            },
+            "E6": {
+              "source": "deploys",
+              "claim": "no deploy of invoice-agent since t=0",
+              "call": "T55"
+            },
+            "E13": {
+              "source": "database",
+              "claim": "SQL `SELECT COUNT(*) FROM messages WHERE attempts > 3 AND updated_at >= :now - 30` returned 1 rows: [{\"COUNT(*)\": \"4\"}]",
+              "call": "T58"
+            }
+          }
+        },
+        {
+          "t": 530,
+          "event": "action",
+          "action": "rollback_service",
+          "params": {
+            "service": "worker"
+          },
+          "result": {
+            "ok": true,
+            "service": "worker",
+            "from": "v1.1",
+            "to": "v1.0"
+          }
+        },
+        {
+          "t": 860,
+          "event": "stable",
+          "window": 330
+        },
+        {
+          "t": 860,
+          "event": "report",
+          "root_causes": [
+            {
+              "service": "worker",
+              "kind": "bad_deploy"
+            }
+          ],
+          "evidence": [
+            "T53",
+            "T54",
+            "T55",
+            "T58"
+          ],
+          "actions": [
+            "t=530: rollback_service {'service': 'worker'} -> {'ok': True, 'service': 'worker', 'from': 'v1.1', 'to': 'v1.0'}"
+          ],
+          "escalated": false,
+          "recovered": true,
+          "reason": "stable for 330 s: every check clean"
+        }
+      ],
+      "cost_usd": 0.0,
+      "llm_calls": 3,
+      "success": true
+    },
+    {
+      "scenario": "val_provider_down",
+      "split": "validation",
+      "family": "provider_down",
+      "seed": 1,
+      "agent": "raqib_no_ledger",
+      "onset": 493,
+      "fixable": false,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 7,
+      "mttr": null,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": null,
+      "escalated": true,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [],
+      "diagnosis": [
+        {
+          "service": "payment-provider",
+          "kind": "external_dependency"
+        }
+      ],
+      "final_violations": [
+        "I7_payments_succeed"
+      ],
+      "stable": false,
+      "recovery_claim": false,
+      "false_recovery_claim": false,
+      "false_failure_claim": false,
+      "evidence_cited": 3,
+      "evidence_valid": 3,
+      "invalid_evidence": [],
+      "timeline": [
+        {
+          "t": 500,
+          "event": "incident",
+          "signals": [
+            "M2_error_burst"
+          ]
+        },
+        {
+          "t": 500,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "logs",
+              "service": "payment-provider",
+              "level": "ERROR",
+              "contains": null,
+              "why": "Check if payment-provider is experiencing internal errors or downtime that would explain 503 responses"
+            },
+            {
+              "tool": "metrics",
+              "service": "payment-provider",
+              "level": null,
+              "contains": "errors",
+              "why": "Verify if payment-provider error rates increased around t=493 to confirm external dependency failure"
+            }
+          ],
+          "evidence": [
+            "E9 [logs] (payment-provider) log search service=payment-provider level=ERROR contains='': 0 records; latest: []"
+          ],
+          "notes": [
+            "unknown tool metrics"
+          ]
+        },
+        {
+          "t": 500,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT COUNT(*) FROM payments WHERE status = 'failed' AND created_at >= :now - 60",
+              "why": "Count recent failed payments to correlate with payment-service error rates"
+            }
+          ],
+          "evidence": [
+            "E10 [database] (payment-service) SQL `SELECT COUNT(*) FROM payments WHERE status = 'failed' AND created_at >= :now - 60` returned 1 rows: [{\"COUNT(*)\": \"39\"}]"
+          ],
+          "notes": []
+        },
+        {
+          "t": 500,
+          "event": "hypotheses",
+          "round": 1,
+          "summary": "Payment provider external dependency failure causing 503 errors and payment failures",
+          "verdicts": [
+            {
+              "service": "payment-provider",
+              "kind": "external_dependency",
+              "proven": true,
+              "sources": [
+                "database",
+                "logs"
+              ],
+              "supporting": [
+                "E4",
+                "E7",
+                "E10"
+              ],
+              "refuting": [
+                "E5"
+              ],
+              "problems": [],
+              "mechanism": "Payment provider started returning 503 errors at t=493, causing all payment requests to fail"
+            }
+          ],
+          "evidence": {
+            "E4": {
+              "source": "logs",
+              "claim": "ERROR payment-service \"provider request failed\" (status=503): 39 times, first t=493, last t=500, never seen in the baseline",
+              "call": "T48"
+            },
+            "E5": {
+              "source": "deploys",
+              "claim": "no deploy of payment-service since t=0",
+              "call": "T49"
+            },
+            "E7": {
+              "source": "topology",
+              "claim": "payment-provider depends on: nothing; used by: payment-service",
+              "call": "T50"
+            },
+            "E10": {
+              "source": "database",
+              "claim": "SQL `SELECT COUNT(*) FROM payments WHERE status = 'failed' AND created_at >= :now - 60` returned 1 rows: [{\"COUNT(*)\": \"39\"}]",
+              "call": "T52"
+            }
+          }
+        },
+        {
+          "t": 500,
+          "event": "escalated",
+          "reason": "cause is outside the system: payment-provider (external_dependency)"
+        },
+        {
+          "t": 500,
+          "event": "report",
+          "root_causes": [
+            {
+              "service": "payment-provider",
+              "kind": "external_dependency"
+            }
+          ],
+          "evidence": [
+            "T48",
+            "T50",
+            "T52"
+          ],
+          "actions": [],
+          "escalated": true,
+          "recovered": false,
+          "reason": "cause is outside the system: payment-provider (external_dependency)"
+        }
+      ],
+      "cost_usd": 0.0,
+      "llm_calls": 3,
+      "success": true
+    },
+    {
+      "scenario": "val_decoy_after_fault",
+      "split": "validation",
+      "family": "invoice_swap",
+      "seed": 1,
+      "agent": "raqib_no_ledger",
+      "onset": 500,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 10,
+      "mttr": null,
+      "root_cause_correct": false,
+      "root_cause_recall": 0.0,
+      "recovered": false,
+      "escalated": true,
+      "escalation_correct": false,
+      "harmful_actions": 0,
+      "unnecessary_actions": 2,
+      "actions": [
+        {
+          "ts": 10,
+          "action": "rollback_service",
+          "params": {
+            "service": "sync-job"
+          }
+        },
+        {
+          "ts": 10,
+          "action": "resync_ledger",
+          "params": {}
+        },
+        {
+          "ts": 40,
+          "action": "resync_ledger",
+          "params": {}
+        },
+        {
+          "ts": 70,
+          "action": "resync_ledger",
+          "params": {}
+        },
+        {
+          "ts": 100,
+          "action": "resync_ledger",
+          "params": {}
+        },
+        {
+          "ts": 160,
+          "action": "rollback_service",
+          "params": {
+            "service": "invoice-agent"
+          }
+        },
+        {
+          "ts": 220,
+          "action": "restart_service",
+          "params": {
+            "service": "worker"
+          }
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "database",
+          "kind": "runtime_fault"
+        }
+      ],
+      "final_violations": [
+        "I3_ledger_integrity"
+      ],
+      "stable": false,
+      "recovery_claim": false,
+      "false_recovery_claim": false,
+      "false_failure_claim": false,
+      "evidence_cited": 10,
+      "evidence_valid": 10,
+      "invalid_evidence": [],
+      "timeline": [
+        {
+          "t": 510,
+          "event": "incident",
+          "signals": [
+            "I3_ledger_integrity"
+          ]
+        },
+        {
+          "t": 510,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT order_id, amount, vat, total FROM ledger WHERE vat != amount * 0.15 OR total != amount + vat",
+              "why": "Identify the specific ledger rows violating the invariant to understand if it's a calculation error or data corruption"
+            },
+            {
+              "tool": "logs",
+              "service": "sync-job",
+              "level": "ERROR",
+              "contains": "ledger",
+              "why": "Check for errors during ledger sync that might explain incorrect calculations or writes"
+            }
+          ],
+          "evidence": [
+            "E8 [database] (sync-job) SQL `SELECT order_id, amount, vat, total FROM ledger WHERE vat != amount * 0.15 OR total != amount + vat` returned 20+ rows: [{\"order_id\": \"ORD-00001\", \"amount\": \"3964.74\", \"vat\": \"594.71\", \"total\": \"4559.45\"}, {\"order_id\": \"ORD-00002\", \"amount\": \"2490.5\", \"vat\": \"373.57\", \"total\": \"2864.07\"}, {\"order_id\": \"ORD-00003\", \"amount\": \"4516.99\", \"vat\": \"677.55\", \"total\": \"5194.54\"}, {\"order_id\": \"ORD-00004\", \"amount\": \"2685.38\", \"vat\": \"402.81\", \"total\": \"3088.19\"}, {\"order_id\": \"ORD-00005\", \"amount\": \"4701.92\", \"vat\": \"705.29\", \"total\": \"5407.21\"}, {\"order_id\": \"ORD-00006\", \"amount\": \"1010.94\", \"vat\": \"151.64\", \"total\": \"1162.58\"}, {\"order_id\": \"ORD-00007\", \"amount\": \"692.36\", \"vat\": \"103.85\", \"total\": \"796.21\"}, {\"or...",
+            "E9 [logs] (sync-job) log search service=sync-job level=ERROR contains='ledger': 0 records; latest: []"
+          ],
+          "notes": []
+        },
+        {
+          "t": 510,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT l.order_id, l.amount, l.vat, l.total, i.amount, i.vat, i.total FROM ledger l JOIN invoices i ON l.order_id = i.order_id WHERE l.vat != l.amount * 0.15 OR l.total != l.amount + l.vat",
+              "why": "Compare ledger rows with their source invoices to determine if the error originates from sync-job calculation or if invoices themselves are incorrect"
+            }
+          ],
+          "evidence": [
+            "E10 [database] (invoice-agent, sync-job, worker) SQL `SELECT l.order_id, l.amount, l.vat, l.total, i.amount, i.vat, i.total FROM ledger l JOIN invoices i ON l.order_id = i.order_id WHERE l.vat != l.amount * 0.15 OR l.total != l.amount + l.vat` returned 20+ rows: [{\"order_id\": \"ORD-00001\", \"amount\": \"3964.74\", \"vat\": \"594.71\", \"total\": \"4559.45\"}, {\"order_id\": \"ORD-00002\", \"amount\": \"2490.5\", \"vat\": \"373.57\", \"total\": \"2864.07\"}, {\"order_id\": \"ORD-00003\", \"amount\": \"4516.99\", \"vat\": \"677.55\", \"total\": \"5194.54\"}, {\"order_id\": \"ORD-00004\", \"amount\": \"2685.38\", \"vat\": \"402.81\", \"total\": \"3088.19\"}, {\"order_id\": \"ORD-00005\", \"amount\": \"4701.92\", \"vat\": \"705.29\", \"total\": \"5407.21\"}, {\"order_id\": \"ORD-00006\", \"amount\": \"1010.94\", \"vat\": \"151.64\", \"total\": \"1162.58\"}, {\"order_id\": \"ORD-00007\", \"amount\": \"692.36\", \"vat\": \"103.85\", \"total\": \"796.21\"}, {\"or..."
+          ],
+          "notes": []
+        },
+        {
+          "t": 510,
+          "event": "hypotheses",
+          "round": 1,
+          "summary": "A bad deploy of sync-job introduced a calculation bug that corrupted ledger entries",
+          "verdicts": [
+            {
+              "service": "sync-job",
+              "kind": "bad_deploy",
+              "proven": true,
+              "sources": [
+                "database",
+                "deploys"
+              ],
+              "supporting": [
+                "E1",
+                "E4",
+                "E8",
+                "E10"
+              ],
+              "refuting": [
+                "E9"
+              ],
+              "problems": [],
+              "mechanism": "The sync-job v1.0.2 deploy at t=509 introduced a bug that miscalculates VAT and total values when writing to the ledger table"
+            }
+          ],
+          "evidence": {
+            "E1": {
+              "source": "database",
+              "claim": "invariant I3_ledger_integrity violated by 1 rows: Ledger rows respect VAT = 15% of amount and total = amount + VAT",
+              "call": "T48"
+            },
+            "E4": {
+              "source": "deploys",
+              "claim": "deploy sync-job v1.0.2 at t=509 (1 s before the first anomaly, t=510): \"config cleanup\"",
+              "call": "T51"
+            },
+            "E8": {
+              "source": "database",
+              "claim": "SQL `SELECT order_id, amount, vat, total FROM ledger WHERE vat != amount * 0.15 OR total != amount + vat` returned 20+ rows: [{\"order_id\": \"ORD-00001\", \"amount\": \"3964.74\", \"vat\": \"594.71\", \"total\": \"4559.45\"}, {\"order_id\": \"ORD-00002\", \"amount\": \"2490.5\", \"vat\": \"373.57\", \"total\": \"2864.07\"}, {\"order_id\": \"ORD-00003\", \"amount\": \"4516.99\", \"vat\": \"677.55\", \"total\": \"5194.54\"}, {\"order_id\": \"ORD-00004\", \"amount\": \"2685.38\", \"vat\": \"402.81\", \"total\": \"3088.19\"}, {\"order_id\": \"ORD-00005\", \"amount\": \"4701.92\", \"vat\": \"705.29\", \"total\": \"5407.21\"}, {\"order_id\": \"ORD-00006\", \"amount\": \"1010.94\", \"vat\": \"151.64\", \"total\": \"1162.58\"}, {\"order_id\": \"ORD-00007\", \"amount\": \"692.36\", \"vat\": \"103.85\", \"total\": \"796.21\"}, {\"or...",
+              "call": "T53"
+            },
+            "E9": {
+              "source": "logs",
+              "claim": "log search service=sync-job level=ERROR contains='ledger': 0 records; latest: []",
+              "call": "T54"
+            },
+            "E10": {
+              "source": "database",
+              "claim": "SQL `SELECT l.order_id, l.amount, l.vat, l.total, i.amount, i.vat, i.total FROM ledger l JOIN invoices i ON l.order_id = i.order_id WHERE l.vat != l.amount * 0.15 OR l.total != l.amount + l.vat` returned 20+ rows: [{\"order_id\": \"ORD-00001\", \"amount\": \"3964.74\", \"vat\": \"594.71\", \"total\": \"4559.45\"}, {\"order_id\": \"ORD-00002\", \"amount\": \"2490.5\", \"vat\": \"373.57\", \"total\": \"2864.07\"}, {\"order_id\": \"ORD-00003\", \"amount\": \"4516.99\", \"vat\": \"677.55\", \"total\": \"5194.54\"}, {\"order_id\": \"ORD-00004\", \"amount\": \"2685.38\", \"vat\": \"402.81\", \"total\": \"3088.19\"}, {\"order_id\": \"ORD-00005\", \"amount\": \"4701.92\", \"vat\": \"705.29\", \"total\": \"5407.21\"}, {\"order_id\": \"ORD-00006\", \"amount\": \"1010.94\", \"vat\": \"151.64\", \"total\": \"1162.58\"}, {\"order_id\": \"ORD-00007\", \"amount\": \"692.36\", \"vat\": \"103.85\", \"total\": \"796.21\"}, {\"or...",
+              "call": "T55"
+            }
+          }
+        },
+        {
+          "t": 510,
+          "event": "action",
+          "action": "rollback_service",
+          "params": {
+            "service": "sync-job"
+          },
+          "result": {
+            "ok": true,
+            "service": "sync-job",
+            "from": "v1.0.2",
+            "to": "v1.0"
+          }
+        },
+        {
+          "t": 510,
+          "event": "action",
+          "action": "resync_ledger",
+          "params": {},
+          "result": {
+            "ok": true,
+            "fixed": 1
+          }
+        },
+        {
+          "t": 540,
+          "event": "action",
+          "action": "resync_ledger",
+          "params": {},
+          "result": {
+            "ok": true,
+            "fixed": 7
+          }
+        },
+        {
+          "t": 570,
+          "event": "action",
+          "action": "resync_ledger",
+          "params": {},
+          "result": {
+            "ok": true,
+            "fixed": 3
+          }
+        },
+        {
+          "t": 600,
+          "event": "action",
+          "action": "resync_ledger",
+          "params": {},
+          "result": {
+            "ok": true,
+            "fixed": 3
+          }
+        },
+        {
+          "t": 660,
+          "event": "reopened",
+          "signals": [
+            "I3_ledger_integrity"
+          ]
+        },
+        {
+          "t": 660,
+          "event": "refuted",
+          "service": "sync-job",
+          "kind": "bad_deploy",
+          "reason": "sync-job was treated as bad_deploy at t=510, but I3_ledger_integrity persisted"
+        },
+        {
+          "t": 660,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "logs",
+              "service": "invoice-agent",
+              "level": "ERROR",
+              "contains": "VAT",
+              "why": "Check for errors related to VAT calculation or invoice processing that might explain the ledger integrity violations"
+            },
+            {
+              "tool": "sql",
+              "query": "SELECT order_id, amount, vat, total FROM ledger WHERE vat != ROUND(amount * 0.15, 2) OR total != amount + vat ORDER BY synced_at LIMIT 5",
+              "why": "Examine the earliest invalid ledger rows to see if they follow a pattern (e.g., VAT miscalculation) and correlate with invoice-agent deploy timing"
+            }
+          ],
+          "evidence": [
+            "E9 [logs] (invoice-agent) log search service=invoice-agent level=ERROR contains='VAT': 0 records; latest: []",
+            "E10 [database] (sync-job) SQL `SELECT order_id, amount, vat, total FROM ledger WHERE vat != ROUND(amount * 0.15, 2) OR total != amount + vat ORDER BY synced_at LIMIT 5` returned 5 rows: [{\"order_id\": \"ORD-00013\", \"amount\": \"2816.57\", \"vat\": \"422.49\", \"total\": \"3239.06\"}, {\"order_id\": \"ORD-00020\", \"amount\": \"2532.82\", \"vat\": \"379.92\", \"total\": \"2912.74\"}, {\"order_id\": \"ORD-00024\", \"amount\": \"4390.12\", \"vat\": \"658.52\", \"total\": \"5048.64\"}, {\"order_id\": \"ORD-00035\", \"amount\": \"1760.37\", \"vat\": \"264.06\", \"total\": \"2024.43\"}, {\"order_id\": \"ORD-00041\", \"amount\": \"2162.97\", \"vat\": \"324.45\", \"total\": \"2487.42\"}]"
+          ],
+          "notes": []
+        },
+        {
+          "t": 660,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT i.order_id, i.amount, i.vat, i.total, l.amount as l_amount, l.vat as l_vat, l.total as l_total, l.synced_at FROM invoices i JOIN ledger l ON i.order_id = l.order_id WHERE l.vat != ROUND(l.amount * 0.15, 2) OR l.total != l.amount + l.vat ORDER BY l.synced_at LIMIT 5",
+              "why": "Compare invoice table values with ledger values to determine if the error originates in invoice calculation or ledger sync process"
+            }
+          ],
+          "evidence": [
+            "E11 [database] (invoice-agent, sync-job, worker) SQL `SELECT i.order_id, i.amount, i.vat, i.total, l.amount as l_amount, l.vat as l_vat, l.total as l_total, l.synced_at FROM invoices i JOIN ledger l ON i.order_id = l.order_id WHERE l.vat != ROUND(l.amount * 0.15, 2) OR l...` returned 5 rows: [{\"order_id\": \"ORD-00013\", \"amount\": \"2816.57\", \"vat\": \"422.49\", \"total\": \"3239.06\", \"l_amount\": \"2816.57\", \"l_vat\": \"422.49\", \"l_total\": \"3239.06\", \"synced_at\": \"15\"}, {\"order_id\": \"ORD-00020\", \"amount\": \"2532.82\", \"vat\": \"379.92\", \"total\": \"2912.74\", \"l_amount\": \"2532.82\", \"l_vat\": \"379.92\", \"l_total\": \"2912.74\", \"synced_at\": \"30\"}, {\"order_id\": \"ORD-00024\", \"amount\": \"4390.12\", \"vat\": \"658.52\", \"total\": \"5048.64\", \"l_amount\": \"4390.12\", \"l_vat\": \"658.52\", \"l_total\": \"5048.64\", \"synced_at\": \"30\"}, {\"order_id\": \"ORD-00035\", \"amount\": \"1760.37\", \"vat\": \"264.06\", \"total\": \"2024.43\", \"l_amoun..."
+          ],
+          "notes": []
+        },
+        {
+          "t": 660,
+          "event": "hypotheses",
+          "round": 2,
+          "summary": "Invoice-agent bad deploy caused VAT miscalculation that propagated to ledger",
+          "verdicts": [
+            {
+              "service": "invoice-agent",
+              "kind": "bad_deploy",
+              "proven": true,
+              "sources": [
+                "database",
+                "deploys"
+              ],
+              "supporting": [
+                "E1",
+                "E3",
+                "E11"
+              ],
+              "refuting": [
+                "E5",
+                "E9"
+              ],
+              "problems": [
+                "E10 is not about invoice-agent or a service that depends on it"
+              ],
+              "mechanism": "Invoice-agent v1.1 deploy introduced a VAT calculation error that writes incorrect values to the invoices table, which sync-job then copies to ledger"
+            }
+          ],
+          "evidence": {
+            "E1": {
+              "source": "database",
+              "claim": "invariant I3_ledger_integrity violated by 11 rows: Ledger rows respect VAT = 15% of amount and total = amount + VAT",
+              "call": "T74"
+            },
+            "E3": {
+              "source": "deploys",
+              "claim": "deploy invoice-agent v1.1 at t=499 (11 s before the first anomaly, t=510): \"prompt wording update\"",
+              "call": "T77"
+            },
+            "E5": {
+              "source": "deploys",
+              "claim": "rollback (by Raqib) sync-job v1.0 at t=510 (0 s before the first anomaly, t=510): \"rollback from v1.0.2\"",
+              "call": "T77"
+            },
+            "E9": {
+              "source": "logs",
+              "claim": "log search service=invoice-agent level=ERROR contains='VAT': 0 records; latest: []",
+              "call": "T79"
+            },
+            "E11": {
+              "source": "database",
+              "claim": "SQL `SELECT i.order_id, i.amount, i.vat, i.total, l.amount as l_amount, l.vat as l_vat, l.total as l_total, l.synced_at FROM invoices i JOIN ledger l ON i.order_id = l.order_id WHERE l.vat != ROUND(l.amount * 0.15, 2) OR l...` returned 5 rows: [{\"order_id\": \"ORD-00013\", \"amount\": \"2816.57\", \"vat\": \"422.49\", \"total\": \"3239.06\", \"l_amount\": \"2816.57\", \"l_vat\": \"422.49\", \"l_total\": \"3239.06\", \"synced_at\": \"15\"}, {\"order_id\": \"ORD-00020\", \"amount\": \"2532.82\", \"vat\": \"379.92\", \"total\": \"2912.74\", \"l_amount\": \"2532.82\", \"l_vat\": \"379.92\", \"l_total\": \"2912.74\", \"synced_at\": \"30\"}, {\"order_id\": \"ORD-00024\", \"amount\": \"4390.12\", \"vat\": \"658.52\", \"total\": \"5048.64\", \"l_amount\": \"4390.12\", \"l_vat\": \"658.52\", \"l_total\": \"5048.64\", \"synced_at\": \"30\"}, {\"order_id\": \"ORD-00035\", \"amount\": \"1760.37\", \"vat\": \"264.06\", \"total\": \"2024.43\", \"l_amoun...",
+              "call": "T81"
+            }
+          }
+        },
+        {
+          "t": 660,
+          "event": "ruled_out",
+          "service": "sync-job",
+          "persisting": [
+            "I3_ledger_integrity"
+          ]
+        },
+        {
+          "t": 660,
+          "event": "action",
+          "action": "rollback_service",
+          "params": {
+            "service": "invoice-agent"
+          },
+          "result": {
+            "ok": true,
+            "service": "invoice-agent",
+            "from": "v1.1",
+            "to": "v1.0"
+          }
+        },
+        {
+          "t": 720,
+          "event": "reopened",
+          "signals": [
+            "I3_ledger_integrity"
+          ]
+        },
+        {
+          "t": 720,
+          "event": "refuted",
+          "service": "invoice-agent",
+          "kind": "bad_deploy",
+          "reason": "invoice-agent was treated as bad_deploy at t=660, but I3_ledger_integrity persisted"
+        },
+        {
+          "t": 720,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT order_id, amount, vat, total, synced_at FROM ledger WHERE ABS(total - (amount + vat)) > 0.01 OR ABS(vat - (amount * 0.15)) > 0.01 ORDER BY synced_at LIMIT 11",
+              "why": "Identify the earliest ledger violations to determine if they correlate with sync-job activity or other events"
+            },
+            {
+              "tool": "logs",
+              "service": "sync-job",
+              "level": "ERROR",
+              "contains": "database",
+              "why": "Check for database connection or query errors in sync-job logs that might explain data corruption"
+            }
+          ],
+          "evidence": [
+            "E10 [database] (sync-job) SQL `SELECT order_id, amount, vat, total, synced_at FROM ledger WHERE ABS(total - (amount + vat)) > 0.01 OR ABS(vat - (amount * 0.15)) > 0.01 ORDER BY synced_at LIMIT 11` returned 11 rows: [{\"order_id\": \"ORD-01185\", \"amount\": \"688.98\", \"vat\": \"4593.21\", \"total\": \"5282.19\", \"synced_at\": \"615\"}, {\"order_id\": \"ORD-01186\", \"amount\": \"714.86\", \"vat\": \"4765.72\", \"total\": \"5480.58\", \"synced_at\": \"615\"}, {\"order_id\": \"ORD-01187\", \"amount\": \"530.85\", \"vat\": \"3538.98\", \"total\": \"4069.83\", \"synced_at\": \"615\"}, {\"order_id\": \"ORD-01188\", \"amount\": \"477.46\", \"vat\": \"3183.04\", \"total\": \"3660.5\", \"synced_at\": \"615\"}, {\"order_id\": \"ORD-01190\", \"amount\": \"428.54\", \"vat\": \"2856.94\", \"total\": \"3285.48\", \"synced_at\": \"615\"}, {\"order_id\": \"ORD-01239\", \"amount\": \"683.91\", \"vat\": \"4559.41\", \"total\":...",
+            "E11 [logs] (sync-job) log search service=sync-job level=ERROR contains='database': 0 records; latest: []"
+          ],
+          "notes": []
+        },
+        {
+          "t": 720,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT i.order_id, i.amount, i.vat, i.total, i.created_at FROM invoices i JOIN ledger l ON i.order_id = l.order_id WHERE ABS(l.total - (l.amount + l.vat)) > 0.01 OR ABS(l.vat - (l.amount * 0.15)) > 0.01 ORDER BY i.created_at LIMIT 11",
+              "why": "Compare invoice table values with ledger violations to determine if corruption originates from invoices or sync-job processing"
+            }
+          ],
+          "evidence": [
+            "E12 [database] (invoice-agent, sync-job, worker) SQL `SELECT i.order_id, i.amount, i.vat, i.total, i.created_at FROM invoices i JOIN ledger l ON i.order_id = l.order_id WHERE ABS(l.total - (l.amount + l.vat)) > 0.01 OR ABS(l.vat - (l.amount * 0.15)) > 0.01 ORDER BY i.cre...` returned 11 rows: [{\"order_id\": \"ORD-01185\", \"amount\": \"688.98\", \"vat\": \"4593.21\", \"total\": \"5282.19\", \"created_at\": \"602\"}, {\"order_id\": \"ORD-01186\", \"amount\": \"714.86\", \"vat\": \"4765.72\", \"total\": \"5480.58\", \"created_at\": \"602\"}, {\"order_id\": \"ORD-01187\", \"amount\": \"530.85\", \"vat\": \"3538.98\", \"total\": \"4069.83\", \"created_at\": \"602\"}, {\"order_id\": \"ORD-01188\", \"amount\": \"477.46\", \"vat\": \"3183.04\", \"total\": \"3660.5\", \"created_at\": \"602\"}, {\"order_id\": \"ORD-01190\", \"amount\": \"428.54\", \"vat\": \"2856.94\", \"total\": \"3285.48\", \"created_at\": \"603\"}, {\"order_id\": \"ORD-01239\", \"amount\": \"683.91\", \"vat\": \"4559.41\", \"to..."
+          ],
+          "notes": []
+        },
+        {
+          "t": 720,
+          "event": "hypotheses",
+          "round": 3,
+          "summary": "Worker runtime fault causing invoice data corruption, leading to ledger integrity violations.",
+          "verdicts": [
+            {
+              "service": "worker",
+              "kind": "runtime_fault",
+              "proven": true,
+              "sources": [
+                "database"
+              ],
+              "supporting": [
+                "E12"
+              ],
+              "refuting": [
+                "E2",
+                "E11"
+              ],
+              "problems": [
+                "E1 is not about worker or a service that depends on it",
+                "E10 is not about worker or a service that depends on it",
+                "supporting evidence from 1 source(s), need 2",
+                "refuting evidence outweighs supporting evidence"
+              ],
+              "mechanism": "Worker process is corrupting invoice data by incorrectly calculating VAT and total amounts before writing to invoices table, which sync-job then copies to ledger."
+            }
+          ],
+          "evidence": {
+            "E2": {
+              "source": "database",
+              "claim": "these invariants hold: I1_payment_has_order, I2_no_orphaned_orders, I4_workflow_progress, I5_single_payment, I6_retry_budget, I7_payments_succeed",
+              "call": "T90"
+            },
+            "E11": {
+              "source": "logs",
+              "claim": "log search service=sync-job level=ERROR contains='database': 0 records; latest: []",
+              "call": "T96"
+            },
+            "E12": {
+              "source": "database",
+              "claim": "SQL `SELECT i.order_id, i.amount, i.vat, i.total, i.created_at FROM invoices i JOIN ledger l ON i.order_id = l.order_id WHERE ABS(l.total - (l.amount + l.vat)) > 0.01 OR ABS(l.vat - (l.amount * 0.15)) > 0.01 ORDER BY i.cre...` returned 11 rows: [{\"order_id\": \"ORD-01185\", \"amount\": \"688.98\", \"vat\": \"4593.21\", \"total\": \"5282.19\", \"created_at\": \"602\"}, {\"order_id\": \"ORD-01186\", \"amount\": \"714.86\", \"vat\": \"4765.72\", \"total\": \"5480.58\", \"created_at\": \"602\"}, {\"order_id\": \"ORD-01187\", \"amount\": \"530.85\", \"vat\": \"3538.98\", \"total\": \"4069.83\", \"created_at\": \"602\"}, {\"order_id\": \"ORD-01188\", \"amount\": \"477.46\", \"vat\": \"3183.04\", \"total\": \"3660.5\", \"created_at\": \"602\"}, {\"order_id\": \"ORD-01190\", \"amount\": \"428.54\", \"vat\": \"2856.94\", \"total\": \"3285.48\", \"created_at\": \"603\"}, {\"order_id\": \"ORD-01239\", \"amount\": \"683.91\", \"vat\": \"4559.41\", \"to...",
+              "call": "T97"
+            }
+          }
+        },
+        {
+          "t": 720,
+          "event": "ruled_out",
+          "service": "invoice-agent",
+          "persisting": [
+            "I3_ledger_integrity"
+          ]
+        },
+        {
+          "t": 720,
+          "event": "action",
+          "action": "restart_service",
+          "params": {
+            "service": "worker"
+          },
+          "result": {
+            "ok": true,
+            "service": "worker",
+            "connections_released": 0
+          }
+        },
+        {
+          "t": 780,
+          "event": "reopened",
+          "signals": [
+            "I3_ledger_integrity"
+          ]
+        },
+        {
+          "t": 780,
+          "event": "refuted",
+          "service": "worker",
+          "kind": "runtime_fault",
+          "reason": "worker was treated as runtime_fault at t=720, but I3_ledger_integrity persisted"
+        },
+        {
+          "t": 780,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT order_id, amount, vat, total FROM ledger WHERE vat != ROUND(amount * 0.15, 2) OR total != amount + vat ORDER BY synced_at LIMIT 5",
+              "why": "Check the earliest ledger violations to see if they correlate with specific orders or patterns"
+            },
+            {
+              "tool": "logs",
+              "service": "worker",
+              "level": "ERROR",
+              "contains": "invoice",
+              "why": "Look for errors in worker related to invoice processing that might indicate data corruption"
+            }
+          ],
+          "evidence": [
+            "E10 [database] (sync-job) SQL `SELECT order_id, amount, vat, total FROM ledger WHERE vat != ROUND(amount * 0.15, 2) OR total != amount + vat ORDER BY synced_at LIMIT 5` returned 5 rows: [{\"order_id\": \"ORD-00013\", \"amount\": \"2816.57\", \"vat\": \"422.49\", \"total\": \"3239.06\"}, {\"order_id\": \"ORD-00020\", \"amount\": \"2532.82\", \"vat\": \"379.92\", \"total\": \"2912.74\"}, {\"order_id\": \"ORD-00024\", \"amount\": \"4390.12\", \"vat\": \"658.52\", \"total\": \"5048.64\"}, {\"order_id\": \"ORD-00035\", \"amount\": \"1760.37\", \"vat\": \"264.06\", \"total\": \"2024.43\"}, {\"order_id\": \"ORD-00041\", \"amount\": \"2162.97\", \"vat\": \"324.45\", \"total\": \"2487.42\"}]",
+            "E11 [logs] (worker) log search service=worker level=ERROR contains='invoice': 0 records; latest: []"
+          ],
+          "notes": []
+        },
+        {
+          "t": 780,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT i.order_id, i.amount, i.vat, i.total, l.amount, l.vat, l.total FROM invoices i JOIN ledger l ON i.order_id = l.order_id WHERE l.vat != ROUND(l.amount * 0.15, 2) OR l.total != l.amount + l.vat LIMIT 5",
+              "why": "Compare invoice table values with ledger to see if the corruption originates in invoices or is introduced during sync"
+            }
+          ],
+          "evidence": [
+            "E12 [database] (invoice-agent, sync-job, worker) SQL `SELECT i.order_id, i.amount, i.vat, i.total, l.amount, l.vat, l.total FROM invoices i JOIN ledger l ON i.order_id = l.order_id WHERE l.vat != ROUND(l.amount * 0.15, 2) OR l.total != l.amount + l.vat LIMIT 5` returned 5 rows: [{\"order_id\": \"ORD-00013\", \"amount\": \"2816.57\", \"vat\": \"422.49\", \"total\": \"3239.06\"}, {\"order_id\": \"ORD-00020\", \"amount\": \"2532.82\", \"vat\": \"379.92\", \"total\": \"2912.74\"}, {\"order_id\": \"ORD-00024\", \"amount\": \"4390.12\", \"vat\": \"658.52\", \"total\": \"5048.64\"}, {\"order_id\": \"ORD-00035\", \"amount\": \"1760.37\", \"vat\": \"264.06\", \"total\": \"2024.43\"}, {\"order_id\": \"ORD-00041\", \"amount\": \"2162.97\", \"vat\": \"324.45\", \"total\": \"2487.42\"}]"
+          ],
+          "notes": []
+        },
+        {
+          "t": 780,
+          "event": "hypotheses",
+          "round": 4,
+          "summary": "Database runtime fault causing ledger integrity violations despite correct invoice data",
+          "verdicts": [
+            {
+              "service": "database",
+              "kind": "runtime_fault",
+              "proven": true,
+              "sources": [
+                "database"
+              ],
+              "supporting": [
+                "E1",
+                "E10",
+                "E12"
+              ],
+              "refuting": [
+                "E2"
+              ],
+              "problems": [
+                "supporting evidence from 1 source(s), need 2"
+              ],
+              "mechanism": "Database corruption or miscalculation in ledger table causing VAT and total values to be incorrect despite correct invoice data"
+            }
+          ],
+          "evidence": {
+            "E1": {
+              "source": "database",
+              "claim": "invariant I3_ledger_integrity violated by 11 rows: Ledger rows respect VAT = 15% of amount and total = amount + VAT",
+              "call": "T106"
+            },
+            "E2": {
+              "source": "database",
+              "claim": "these invariants hold: I1_payment_has_order, I2_no_orphaned_orders, I4_workflow_progress, I5_single_payment, I6_retry_budget, I7_payments_succeed",
+              "call": "T106"
+            },
+            "E10": {
+              "source": "database",
+              "claim": "SQL `SELECT order_id, amount, vat, total FROM ledger WHERE vat != ROUND(amount * 0.15, 2) OR total != amount + vat ORDER BY synced_at LIMIT 5` returned 5 rows: [{\"order_id\": \"ORD-00013\", \"amount\": \"2816.57\", \"vat\": \"422.49\", \"total\": \"3239.06\"}, {\"order_id\": \"ORD-00020\", \"amount\": \"2532.82\", \"vat\": \"379.92\", \"total\": \"2912.74\"}, {\"order_id\": \"ORD-00024\", \"amount\": \"4390.12\", \"vat\": \"658.52\", \"total\": \"5048.64\"}, {\"order_id\": \"ORD-00035\", \"amount\": \"1760.37\", \"vat\": \"264.06\", \"total\": \"2024.43\"}, {\"order_id\": \"ORD-00041\", \"amount\": \"2162.97\", \"vat\": \"324.45\", \"total\": \"2487.42\"}]",
+              "call": "T111"
+            },
+            "E12": {
+              "source": "database",
+              "claim": "SQL `SELECT i.order_id, i.amount, i.vat, i.total, l.amount, l.vat, l.total FROM invoices i JOIN ledger l ON i.order_id = l.order_id WHERE l.vat != ROUND(l.amount * 0.15, 2) OR l.total != l.amount + l.vat LIMIT 5` returned 5 rows: [{\"order_id\": \"ORD-00013\", \"amount\": \"2816.57\", \"vat\": \"422.49\", \"total\": \"3239.06\"}, {\"order_id\": \"ORD-00020\", \"amount\": \"2532.82\", \"vat\": \"379.92\", \"total\": \"2912.74\"}, {\"order_id\": \"ORD-00024\", \"amount\": \"4390.12\", \"vat\": \"658.52\", \"total\": \"5048.64\"}, {\"order_id\": \"ORD-00035\", \"amount\": \"1760.37\", \"vat\": \"264.06\", \"total\": \"2024.43\"}, {\"order_id\": \"ORD-00041\", \"amount\": \"2162.97\", \"vat\": \"324.45\", \"total\": \"2487.42\"}]",
+              "call": "T113"
+            }
+          }
+        },
+        {
+          "t": 780,
+          "event": "ruled_out",
+          "service": "worker",
+          "persisting": [
+            "I3_ledger_integrity"
+          ]
+        },
+        {
+          "t": 840,
+          "event": "reopened",
+          "signals": [
+            "I3_ledger_integrity"
+          ]
+        },
+        {
+          "t": 840,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT order_id, amount, vat, total, created_at FROM invoices WHERE vat != ROUND(amount * 0.15, 2) OR total != ROUND(amount + vat, 2) ORDER BY created_at LIMIT 5",
+              "why": "Find the earliest bad invoices to determine if the issue originates from invoice creation"
+            },
+            {
+              "tool": "logs",
+              "service": "worker",
+              "level": "ERROR",
+              "contains": "invoice",
+              "why": "Look for errors in worker related to invoice processing that might explain bad data generation"
+            }
+          ],
+          "evidence": [
+            "E10 [database] (invoice-agent, worker) SQL `SELECT order_id, amount, vat, total, created_at FROM invoices WHERE vat != ROUND(amount * 0.15, 2) OR total != ROUND(amount + vat, 2) ORDER BY created_at LIMIT 5` returned 5 rows: [{\"order_id\": \"ORD-01185\", \"amount\": \"688.98\", \"vat\": \"4593.21\", \"total\": \"5282.19\", \"created_at\": \"602\"}, {\"order_id\": \"ORD-01186\", \"amount\": \"714.86\", \"vat\": \"4765.72\", \"total\": \"5480.58\", \"created_at\": \"602\"}, {\"order_id\": \"ORD-01187\", \"amount\": \"530.85\", \"vat\": \"3538.98\", \"total\": \"4069.83\", \"created_at\": \"602\"}, {\"order_id\": \"ORD-01188\", \"amount\": \"477.46\", \"vat\": \"3183.04\", \"total\": \"3660.5\", \"created_at\": \"602\"}, {\"order_id\": \"ORD-01190\", \"amount\": \"428.54\", \"vat\": \"2856.94\", \"total\": \"3285.48\", \"created_at\": \"603\"}]",
+            "E11 [logs] (worker) log search service=worker level=ERROR contains='invoice': 0 records; latest: []"
+          ],
+          "notes": []
+        },
+        {
+          "t": 840,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT created_at, COUNT(*) FROM invoices WHERE vat != ROUND(amount * 0.15, 2) OR total != ROUND(amount + vat, 2) GROUP BY created_at ORDER BY created_at",
+              "why": "Determine the timing pattern of bad invoice creation to correlate with potential causes"
+            }
+          ],
+          "evidence": [
+            "E12 [database] (invoice-agent, worker) SQL `SELECT created_at, COUNT(*) FROM invoices WHERE vat != ROUND(amount * 0.15, 2) OR total != ROUND(amount + vat, 2) GROUP BY created_at ORDER BY created_at` returned 9 rows: [{\"created_at\": \"602\", \"COUNT(*)\": \"4\"}, {\"created_at\": \"603\", \"COUNT(*)\": \"1\"}, {\"created_at\": \"626\", \"COUNT(*)\": \"1\"}, {\"created_at\": \"640\", \"COUNT(*)\": \"1\"}, {\"created_at\": \"643\", \"COUNT(*)\": \"1\"}, {\"created_at\": \"651\", \"COUNT(*)\": \"1\"}, {\"created_at\": \"655\", \"COUNT(*)\": \"1\"}, {\"created_at\": \"657\", \"COUNT(*)\": \"1\"}]"
+          ],
+          "notes": []
+        },
+        {
+          "t": 840,
+          "event": "hypotheses",
+          "round": 5,
+          "summary": "Worker runtime fault causing persistent invoice calculation errors despite previous restart attempts",
+          "verdicts": [
+            {
+              "service": "worker",
+              "kind": "runtime_fault",
+              "proven": false,
+              "sources": [
+                "database"
+              ],
+              "supporting": [
+                "E10",
+                "E12"
+              ],
+              "refuting": [
+                "E11"
+              ],
+              "problems": [
+                "supporting evidence from 1 source(s), need 2",
+                "refuted by experiment: worker was treated as runtime_fault at t=720, but I3_ledger_integrity persisted"
+              ],
+              "mechanism": "Worker process is generating invoices with incorrect VAT and total calculations due to a runtime fault that persisted through previous restart attempts"
+            }
+          ],
+          "evidence": {
+            "E10": {
+              "source": "database",
+              "claim": "SQL `SELECT order_id, amount, vat, total, created_at FROM invoices WHERE vat != ROUND(amount * 0.15, 2) OR total != ROUND(amount + vat, 2) ORDER BY created_at LIMIT 5` returned 5 rows: [{\"order_id\": \"ORD-01185\", \"amount\": \"688.98\", \"vat\": \"4593.21\", \"total\": \"5282.19\", \"created_at\": \"602\"}, {\"order_id\": \"ORD-01186\", \"amount\": \"714.86\", \"vat\": \"4765.72\", \"total\": \"5480.58\", \"created_at\": \"602\"}, {\"order_id\": \"ORD-01187\", \"amount\": \"530.85\", \"vat\": \"3538.98\", \"total\": \"4069.83\", \"created_at\": \"602\"}, {\"order_id\": \"ORD-01188\", \"amount\": \"477.46\", \"vat\": \"3183.04\", \"total\": \"3660.5\", \"created_at\": \"602\"}, {\"order_id\": \"ORD-01190\", \"amount\": \"428.54\", \"vat\": \"2856.94\", \"total\": \"3285.48\", \"created_at\": \"603\"}]",
+              "call": "T126"
+            },
+            "E11": {
+              "source": "logs",
+              "claim": "log search service=worker level=ERROR contains='invoice': 0 records; latest: []",
+              "call": "T127"
+            },
+            "E12": {
+              "source": "database",
+              "claim": "SQL `SELECT created_at, COUNT(*) FROM invoices WHERE vat != ROUND(amount * 0.15, 2) OR total != ROUND(amount + vat, 2) GROUP BY created_at ORDER BY created_at` returned 9 rows: [{\"created_at\": \"602\", \"COUNT(*)\": \"4\"}, {\"created_at\": \"603\", \"COUNT(*)\": \"1\"}, {\"created_at\": \"626\", \"COUNT(*)\": \"1\"}, {\"created_at\": \"640\", \"COUNT(*)\": \"1\"}, {\"created_at\": \"643\", \"COUNT(*)\": \"1\"}, {\"created_at\": \"651\", \"COUNT(*)\": \"1\"}, {\"created_at\": \"655\", \"COUNT(*)\": \"1\"}, {\"created_at\": \"657\", \"COUNT(*)\": \"1\"}]",
+              "call": "T128"
+            }
+          }
+        },
+        {
+          "t": 900,
+          "event": "escalated",
+          "reason": "symptoms remain after 5 rounds"
+        },
+        {
+          "t": 900,
+          "event": "report",
+          "root_causes": [
+            {
+              "service": "database",
+              "kind": "runtime_fault"
+            }
+          ],
+          "evidence": [
+            "T48",
+            "T51",
+            "T53",
+            "T55",
+            "T74",
+            "T77",
+            "T81",
+            "T97",
+            "T111",
+            "T113"
+          ],
+          "actions": [
+            "t=510: rollback_service {'service': 'sync-job'} -> {'ok': True, 'service': 'sync-job', 'from': 'v1.0.2', 'to': 'v1.0'}",
+            "t=510: resync_ledger  -> {'ok': True, 'fixed': 1}",
+            "t=540: resync_ledger  -> {'ok': True, 'fixed': 7}",
+            "t=570: resync_ledger  -> {'ok': True, 'fixed': 3}",
+            "t=600: resync_ledger  -> {'ok': True, 'fixed': 3}",
+            "t=660: experiment refuted sync-job (bad_deploy): sync-job was treated as bad_deploy at t=510, but I3_ledger_integrity persisted",
+            "t=660: sync-job ruled out: its fix ran but I3_ledger_integrity persisted",
+            "t=660: rollback_service {'service': 'invoice-agent'} -> {'ok': True, 'service': 'invoice-agent', 'from': 'v1.1', 'to': 'v1.0'}",
+            "t=720: experiment refuted invoice-agent (bad_deploy): invoice-agent was treated as bad_deploy at t=660, but I3_ledger_integrity persisted",
+            "t=720: invoice-agent ruled out: its fix ran but I3_ledger_integrity persisted",
+            "t=720: restart_service {'service': 'worker'} -> {'ok': True, 'service': 'worker', 'connections_released': 0}",
+            "t=780: experiment refuted worker (runtime_fault): worker was treated as runtime_fault at t=720, but I3_ledger_integrity persisted",
+            "t=780: worker ruled out: its fix ran but I3_ledger_integrity persisted",
+            "round 5: no hypothesis passed the evidence check"
+          ],
+          "escalated": true,
+          "recovered": false,
+          "reason": "symptoms remain after 5 rounds"
+        }
+      ],
+      "cost_usd": 0.00464,
+      "llm_calls": 15,
+      "success": false
+    },
+    {
+      "scenario": "val_two_dev_faults",
+      "split": "validation",
+      "family": "concurrent",
+      "seed": 1,
+      "agent": "raqib_no_ledger",
+      "onset": 507,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 33,
+      "mttr": null,
+      "root_cause_correct": false,
+      "root_cause_recall": 0.5,
+      "recovered": false,
+      "escalated": true,
+      "escalation_correct": false,
+      "harmful_actions": 0,
+      "unnecessary_actions": 3,
+      "actions": [
+        {
+          "ts": 33,
+          "action": "restart_service",
+          "params": {
+            "service": "sync-job"
+          }
+        },
+        {
+          "ts": 33,
+          "action": "resync_ledger",
+          "params": {}
+        },
+        {
+          "ts": 63,
+          "action": "resync_ledger",
+          "params": {}
+        },
+        {
+          "ts": 93,
+          "action": "resync_ledger",
+          "params": {}
+        },
+        {
+          "ts": 123,
+          "action": "resync_ledger",
+          "params": {}
+        },
+        {
+          "ts": 183,
+          "action": "rollback_service",
+          "params": {
+            "service": "invoice-agent"
+          }
+        },
+        {
+          "ts": 243,
+          "action": "restart_service",
+          "params": {
+            "service": "worker"
+          }
+        },
+        {
+          "ts": 303,
+          "action": "restart_service",
+          "params": {
+            "service": "database"
+          }
+        },
+        {
+          "ts": 363,
+          "action": "rollback_service",
+          "params": {
+            "service": "workflow"
+          }
+        },
+        {
+          "ts": 363,
+          "action": "rerequest_supplier_approvals",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "workflow",
+          "kind": "bad_deploy"
+        }
+      ],
+      "final_violations": [
+        "I3_ledger_integrity"
+      ],
+      "stable": false,
+      "recovery_claim": false,
+      "false_recovery_claim": false,
+      "false_failure_claim": false,
+      "evidence_cited": 11,
+      "evidence_valid": 11,
+      "invalid_evidence": [],
+      "timeline": [
+        {
+          "t": 540,
+          "event": "incident",
+          "signals": [
+            "I3_ledger_integrity"
+          ]
+        },
+        {
+          "t": 540,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT order_id, amount, vat, total FROM ledger WHERE vat != amount * 0.15 OR total != amount + vat",
+              "why": "Examine the specific ledger rows violating the VAT calculation invariant to understand the pattern of miscalculation"
+            },
+            {
+              "tool": "logs",
+              "service": "sync-job",
+              "level": "ERROR",
+              "contains": "ledger",
+              "why": "Look for sync-job errors related to ledger processing that might indicate calculation issues"
+            }
+          ],
+          "evidence": [
+            "E9 [database] (sync-job) SQL `SELECT order_id, amount, vat, total FROM ledger WHERE vat != amount * 0.15 OR total != amount + vat` returned 20+ rows: [{\"order_id\": \"ORD-00001\", \"amount\": \"3964.74\", \"vat\": \"594.71\", \"total\": \"4559.45\"}, {\"order_id\": \"ORD-00002\", \"amount\": \"2490.5\", \"vat\": \"373.57\", \"total\": \"2864.07\"}, {\"order_id\": \"ORD-00003\", \"amount\": \"4516.99\", \"vat\": \"677.55\", \"total\": \"5194.54\"}, {\"order_id\": \"ORD-00004\", \"amount\": \"2685.38\", \"vat\": \"402.81\", \"total\": \"3088.19\"}, {\"order_id\": \"ORD-00005\", \"amount\": \"4701.92\", \"vat\": \"705.29\", \"total\": \"5407.21\"}, {\"order_id\": \"ORD-00006\", \"amount\": \"1010.94\", \"vat\": \"151.64\", \"total\": \"1162.58\"}, {\"order_id\": \"ORD-00007\", \"amount\": \"692.36\", \"vat\": \"103.85\", \"total\": \"796.21\"}, {\"or...",
+            "E10 [logs] (sync-job) log search service=sync-job level=ERROR contains='ledger': 0 records; latest: []"
+          ],
+          "notes": []
+        },
+        {
+          "t": 540,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT l.order_id, l.amount, l.vat, l.total, i.amount, i.vat, i.total FROM ledger l JOIN invoices i ON l.order_id = i.order_id WHERE l.vat != l.amount * 0.15 OR l.total != l.amount + l.vat",
+              "why": "Compare ledger rows with their source invoice rows to determine if the miscalculation originates in ledger processing or comes from incorrect invoice data"
+            }
+          ],
+          "evidence": [
+            "E11 [database] (invoice-agent, sync-job, worker) SQL `SELECT l.order_id, l.amount, l.vat, l.total, i.amount, i.vat, i.total FROM ledger l JOIN invoices i ON l.order_id = i.order_id WHERE l.vat != l.amount * 0.15 OR l.total != l.amount + l.vat` returned 20+ rows: [{\"order_id\": \"ORD-00001\", \"amount\": \"3964.74\", \"vat\": \"594.71\", \"total\": \"4559.45\"}, {\"order_id\": \"ORD-00002\", \"amount\": \"2490.5\", \"vat\": \"373.57\", \"total\": \"2864.07\"}, {\"order_id\": \"ORD-00003\", \"amount\": \"4516.99\", \"vat\": \"677.55\", \"total\": \"5194.54\"}, {\"order_id\": \"ORD-00004\", \"amount\": \"2685.38\", \"vat\": \"402.81\", \"total\": \"3088.19\"}, {\"order_id\": \"ORD-00005\", \"amount\": \"4701.92\", \"vat\": \"705.29\", \"total\": \"5407.21\"}, {\"order_id\": \"ORD-00006\", \"amount\": \"1010.94\", \"vat\": \"151.64\", \"total\": \"1162.58\"}, {\"order_id\": \"ORD-00007\", \"amount\": \"692.36\", \"vat\": \"103.85\", \"total\": \"796.21\"}, {\"or..."
+          ],
+          "notes": []
+        },
+        {
+          "t": 540,
+          "event": "hypotheses",
+          "round": 1,
+          "summary": "Sync-job has a runtime fault causing incorrect VAT calculations in ledger entries",
+          "verdicts": [
+            {
+              "service": "sync-job",
+              "kind": "runtime_fault",
+              "proven": true,
+              "sources": [
+                "database"
+              ],
+              "supporting": [
+                "E1",
+                "E9",
+                "E11"
+              ],
+              "refuting": [
+                "E5",
+                "E10"
+              ],
+              "problems": [
+                "supporting evidence from 1 source(s), need 2"
+              ],
+              "mechanism": "Sync-job is incorrectly calculating VAT and total amounts when processing invoices, violating the ledger integrity invariant"
+            }
+          ],
+          "evidence": {
+            "E1": {
+              "source": "database",
+              "claim": "invariant I3_ledger_integrity violated by 3 rows: Ledger rows respect VAT = 15% of amount and total = amount + VAT",
+              "call": "T54"
+            },
+            "E5": {
+              "source": "deploys",
+              "claim": "no deploy of sync-job since t=0",
+              "call": "T57"
+            },
+            "E9": {
+              "source": "database",
+              "claim": "SQL `SELECT order_id, amount, vat, total FROM ledger WHERE vat != amount * 0.15 OR total != amount + vat` returned 20+ rows: [{\"order_id\": \"ORD-00001\", \"amount\": \"3964.74\", \"vat\": \"594.71\", \"total\": \"4559.45\"}, {\"order_id\": \"ORD-00002\", \"amount\": \"2490.5\", \"vat\": \"373.57\", \"total\": \"2864.07\"}, {\"order_id\": \"ORD-00003\", \"amount\": \"4516.99\", \"vat\": \"677.55\", \"total\": \"5194.54\"}, {\"order_id\": \"ORD-00004\", \"amount\": \"2685.38\", \"vat\": \"402.81\", \"total\": \"3088.19\"}, {\"order_id\": \"ORD-00005\", \"amount\": \"4701.92\", \"vat\": \"705.29\", \"total\": \"5407.21\"}, {\"order_id\": \"ORD-00006\", \"amount\": \"1010.94\", \"vat\": \"151.64\", \"total\": \"1162.58\"}, {\"order_id\": \"ORD-00007\", \"amount\": \"692.36\", \"vat\": \"103.85\", \"total\": \"796.21\"}, {\"or...",
+              "call": "T59"
+            },
+            "E10": {
+              "source": "logs",
+              "claim": "log search service=sync-job level=ERROR contains='ledger': 0 records; latest: []",
+              "call": "T60"
+            },
+            "E11": {
+              "source": "database",
+              "claim": "SQL `SELECT l.order_id, l.amount, l.vat, l.total, i.amount, i.vat, i.total FROM ledger l JOIN invoices i ON l.order_id = i.order_id WHERE l.vat != l.amount * 0.15 OR l.total != l.amount + l.vat` returned 20+ rows: [{\"order_id\": \"ORD-00001\", \"amount\": \"3964.74\", \"vat\": \"594.71\", \"total\": \"4559.45\"}, {\"order_id\": \"ORD-00002\", \"amount\": \"2490.5\", \"vat\": \"373.57\", \"total\": \"2864.07\"}, {\"order_id\": \"ORD-00003\", \"amount\": \"4516.99\", \"vat\": \"677.55\", \"total\": \"5194.54\"}, {\"order_id\": \"ORD-00004\", \"amount\": \"2685.38\", \"vat\": \"402.81\", \"total\": \"3088.19\"}, {\"order_id\": \"ORD-00005\", \"amount\": \"4701.92\", \"vat\": \"705.29\", \"total\": \"5407.21\"}, {\"order_id\": \"ORD-00006\", \"amount\": \"1010.94\", \"vat\": \"151.64\", \"total\": \"1162.58\"}, {\"order_id\": \"ORD-00007\", \"amount\": \"692.36\", \"vat\": \"103.85\", \"total\": \"796.21\"}, {\"or...",
+              "call": "T61"
+            }
+          }
+        },
+        {
+          "t": 540,
+          "event": "action",
+          "action": "restart_service",
+          "params": {
+            "service": "sync-job"
+          },
+          "result": {
+            "ok": true,
+            "service": "sync-job",
+            "connections_released": 0
+          }
+        },
+        {
+          "t": 540,
+          "event": "action",
+          "action": "resync_ledger",
+          "params": {},
+          "result": {
+            "ok": true,
+            "fixed": 3
+          }
+        },
+        {
+          "t": 570,
+          "event": "action",
+          "action": "resync_ledger",
+          "params": {},
+          "result": {
+            "ok": true,
+            "fixed": 5
+          }
+        },
+        {
+          "t": 600,
+          "event": "action",
+          "action": "resync_ledger",
+          "params": {},
+          "result": {
+            "ok": true,
+            "fixed": 5
+          }
+        },
+        {
+          "t": 630,
+          "event": "action",
+          "action": "resync_ledger",
+          "params": {},
+          "result": {
+            "ok": true,
+            "fixed": 2
+          }
+        },
+        {
+          "t": 690,
+          "event": "reopened",
+          "signals": [
+            "I3_ledger_integrity"
+          ]
+        },
+        {
+          "t": 690,
+          "event": "refuted",
+          "service": "sync-job",
+          "kind": "runtime_fault",
+          "reason": "sync-job was treated as runtime_fault at t=540, but I3_ledger_integrity persisted"
+        },
+        {
+          "t": 690,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT order_id, amount, vat, total FROM ledger WHERE ABS(vat - amount * 0.15) > 0.01 OR ABS(total - (amount + vat)) > 0.01 ORDER BY synced_at LIMIT 5",
+              "why": "Check the earliest ledger violations to see if they correlate with invoice-agent deploy timing"
+            },
+            {
+              "tool": "logs",
+              "service": "invoice-agent",
+              "level": "ERROR",
+              "contains": "extract",
+              "why": "Look for extraction errors in invoice-agent logs that might explain incorrect VAT calculations"
+            }
+          ],
+          "evidence": [
+            "E9 [database] (sync-job) SQL `SELECT order_id, amount, vat, total FROM ledger WHERE ABS(vat - amount * 0.15) > 0.01 OR ABS(total - (amount + vat)) > 0.01 ORDER BY synced_at LIMIT 5` returned 5 rows: [{\"order_id\": \"ORD-01274\", \"amount\": \"255.27\", \"vat\": \"1701.82\", \"total\": \"1957.09\"}, {\"order_id\": \"ORD-01278\", \"amount\": \"567.94\", \"vat\": \"3786.29\", \"total\": \"4354.23\"}, {\"order_id\": \"ORD-01280\", \"amount\": \"177.11\", \"vat\": \"1180.71\", \"total\": \"1357.82\"}, {\"order_id\": \"ORD-01287\", \"amount\": \"738.23\", \"vat\": \"4921.52\", \"total\": \"5659.75\"}, {\"order_id\": \"ORD-01289\", \"amount\": \"423.25\", \"vat\": \"2821.69\", \"total\": \"3244.94\"}]",
+            "E10 [logs] (invoice-agent) log search service=invoice-agent level=ERROR contains='extract': 0 records; latest: []"
+          ],
+          "notes": []
+        },
+        {
+          "t": 690,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT i.order_id, i.amount, i.vat, i.total, l.amount, l.vat, l.total FROM invoices i JOIN ledger l ON i.order_id = l.order_id WHERE ABS(l.vat - l.amount * 0.15) > 0.01 OR ABS(l.total - (l.amount + l.vat)) > 0.01 ORDER BY l.synced_at LIMIT 5",
+              "why": "Compare invoice table values with ledger violations to determine if incorrect values originate from invoice extraction or sync process"
+            }
+          ],
+          "evidence": [
+            "E11 [database] (invoice-agent, sync-job, worker) SQL `SELECT i.order_id, i.amount, i.vat, i.total, l.amount, l.vat, l.total FROM invoices i JOIN ledger l ON i.order_id = l.order_id WHERE ABS(l.vat - l.amount * 0.15) > 0.01 OR ABS(l.total - (l.amount + l.vat)) > 0.01 ORDE...` returned 5 rows: [{\"order_id\": \"ORD-01274\", \"amount\": \"255.27\", \"vat\": \"1701.82\", \"total\": \"1957.09\"}, {\"order_id\": \"ORD-01278\", \"amount\": \"567.94\", \"vat\": \"3786.29\", \"total\": \"4354.23\"}, {\"order_id\": \"ORD-01280\", \"amount\": \"177.11\", \"vat\": \"1180.71\", \"total\": \"1357.82\"}, {\"order_id\": \"ORD-01287\", \"amount\": \"738.23\", \"vat\": \"4921.52\", \"total\": \"5659.75\"}, {\"order_id\": \"ORD-01289\", \"amount\": \"423.25\", \"vat\": \"2821.69\", \"total\": \"3244.94\"}]"
+          ],
+          "notes": []
+        },
+        {
+          "t": 690,
+          "event": "hypotheses",
+          "round": 2,
+          "summary": "Invoice-agent deploy introduced incorrect VAT extraction causing ledger integrity violations",
+          "verdicts": [
+            {
+              "service": "invoice-agent",
+              "kind": "bad_deploy",
+              "proven": true,
+              "sources": [
+                "database",
+                "deploys"
+              ],
+              "supporting": [
+                "E1",
+                "E4",
+                "E11"
+              ],
+              "refuting": [
+                "E5",
+                "E10"
+              ],
+              "problems": [
+                "E9 is not about invoice-agent or a service that depends on it"
+              ],
+              "mechanism": "The invoice-agent v1.1 deploy introduced a fault in VAT calculation that extracts VAT as 10x the correct value (15% of amount)"
+            }
+          ],
+          "evidence": {
+            "E1": {
+              "source": "database",
+              "claim": "invariant I3_ledger_integrity violated by 17 rows: Ledger rows respect VAT = 15% of amount and total = amount + VAT",
+              "call": "T80"
+            },
+            "E4": {
+              "source": "deploys",
+              "claim": "deploy invoice-agent v1.1 at t=521 (19 s before the first anomaly, t=540): \"new extraction prompt\"",
+              "call": "T83"
+            },
+            "E5": {
+              "source": "deploys",
+              "claim": "no deploy of sync-job since t=0",
+              "call": "T83"
+            },
+            "E10": {
+              "source": "logs",
+              "claim": "log search service=invoice-agent level=ERROR contains='extract': 0 records; latest: []",
+              "call": "T86"
+            },
+            "E11": {
+              "source": "database",
+              "claim": "SQL `SELECT i.order_id, i.amount, i.vat, i.total, l.amount, l.vat, l.total FROM invoices i JOIN ledger l ON i.order_id = l.order_id WHERE ABS(l.vat - l.amount * 0.15) > 0.01 OR ABS(l.total - (l.amount + l.vat)) > 0.01 ORDE...` returned 5 rows: [{\"order_id\": \"ORD-01274\", \"amount\": \"255.27\", \"vat\": \"1701.82\", \"total\": \"1957.09\"}, {\"order_id\": \"ORD-01278\", \"amount\": \"567.94\", \"vat\": \"3786.29\", \"total\": \"4354.23\"}, {\"order_id\": \"ORD-01280\", \"amount\": \"177.11\", \"vat\": \"1180.71\", \"total\": \"1357.82\"}, {\"order_id\": \"ORD-01287\", \"amount\": \"738.23\", \"vat\": \"4921.52\", \"total\": \"5659.75\"}, {\"order_id\": \"ORD-01289\", \"amount\": \"423.25\", \"vat\": \"2821.69\", \"total\": \"3244.94\"}]",
+              "call": "T87"
+            }
+          }
+        },
+        {
+          "t": 690,
+          "event": "ruled_out",
+          "service": "sync-job",
+          "persisting": [
+            "I3_ledger_integrity"
+          ]
+        },
+        {
+          "t": 690,
+          "event": "action",
+          "action": "rollback_service",
+          "params": {
+            "service": "invoice-agent"
+          },
+          "result": {
+            "ok": true,
+            "service": "invoice-agent",
+            "from": "v1.1",
+            "to": "v1.0"
+          }
+        },
+        {
+          "t": 750,
+          "event": "reopened",
+          "signals": [
+            "I3_ledger_integrity"
+          ]
+        },
+        {
+          "t": 750,
+          "event": "refuted",
+          "service": "invoice-agent",
+          "kind": "bad_deploy",
+          "reason": "invoice-agent was treated as bad_deploy at t=690, but I3_ledger_integrity persisted"
+        },
+        {
+          "t": 750,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT order_id, amount, vat, total FROM ledger WHERE ROUND(total, 2) != ROUND(amount + vat, 2) OR ROUND(vat, 2) != ROUND(amount * 0.15, 2) LIMIT 5",
+              "why": "Examine the specific ledger violations to understand the pattern of miscalculation"
+            },
+            {
+              "tool": "logs",
+              "service": "worker",
+              "level": "ERROR",
+              "contains": "invoice",
+              "why": "Check for errors in worker related to invoice processing that might explain bad data written to invoices table"
+            }
+          ],
+          "evidence": [
+            "E10 [database] (sync-job) SQL `SELECT order_id, amount, vat, total FROM ledger WHERE ROUND(total, 2) != ROUND(amount + vat, 2) OR ROUND(vat, 2) != ROUND(amount * 0.15, 2) LIMIT 5` returned 5 rows: [{\"order_id\": \"ORD-01274\", \"amount\": \"255.27\", \"vat\": \"1701.82\", \"total\": \"1957.09\"}, {\"order_id\": \"ORD-01278\", \"amount\": \"567.94\", \"vat\": \"3786.29\", \"total\": \"4354.23\"}, {\"order_id\": \"ORD-01280\", \"amount\": \"177.11\", \"vat\": \"1180.71\", \"total\": \"1357.82\"}, {\"order_id\": \"ORD-01287\", \"amount\": \"738.23\", \"vat\": \"4921.52\", \"total\": \"5659.75\"}, {\"order_id\": \"ORD-01289\", \"amount\": \"423.25\", \"vat\": \"2821.69\", \"total\": \"3244.94\"}]",
+            "E11 [logs] (worker) log search service=worker level=ERROR contains='invoice': 0 records; latest: []"
+          ],
+          "notes": []
+        },
+        {
+          "t": 750,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT i.order_id, i.amount, i.vat, i.total, l.amount as ledger_amount, l.vat as ledger_vat, l.total as ledger_total FROM invoices i JOIN ledger l ON i.order_id = l.order_id WHERE ROUND(l.total, 2) != ROUND(l.amount + l.vat, 2) OR ROUND(l.vat, 2) != ROUND(l.amount * 0.15, 2) LIMIT 5",
+              "why": "Compare invoice table values with ledger values to determine if the error originates in invoice creation or ledger sync"
+            }
+          ],
+          "evidence": [
+            "E12 [database] (invoice-agent, sync-job, worker) SQL `SELECT i.order_id, i.amount, i.vat, i.total, l.amount as ledger_amount, l.vat as ledger_vat, l.total as ledger_total FROM invoices i JOIN ledger l ON i.order_id = l.order_id WHERE ROUND(l.total, 2) != ROUND(l.amount +...` returned 5 rows: [{\"order_id\": \"ORD-01274\", \"amount\": \"255.27\", \"vat\": \"1701.82\", \"total\": \"1957.09\", \"ledger_amount\": \"255.27\", \"ledger_vat\": \"1701.82\", \"ledger_total\": \"1957.09\"}, {\"order_id\": \"ORD-01278\", \"amount\": \"567.94\", \"vat\": \"3786.29\", \"total\": \"4354.23\", \"ledger_amount\": \"567.94\", \"ledger_vat\": \"3786.29\", \"ledger_total\": \"4354.23\"}, {\"order_id\": \"ORD-01280\", \"amount\": \"177.11\", \"vat\": \"1180.71\", \"total\": \"1357.82\", \"ledger_amount\": \"177.11\", \"ledger_vat\": \"1180.71\", \"ledger_total\": \"1357.82\"}, {\"order_id\": \"ORD-01287\", \"amount\": \"738.23\", \"vat\": \"4921.52\", \"total\": \"5659.75\", \"ledger_amount\": \"73..."
+          ],
+          "notes": []
+        },
+        {
+          "t": 750,
+          "event": "hypotheses",
+          "round": 3,
+          "summary": "Worker process has a runtime fault causing VAT miscalculation (multiplying by 10 instead of 0.15)",
+          "verdicts": [
+            {
+              "service": "worker",
+              "kind": "runtime_fault",
+              "proven": true,
+              "sources": [
+                "database"
+              ],
+              "supporting": [
+                "E12"
+              ],
+              "refuting": [
+                "E11"
+              ],
+              "problems": [
+                "E10 is not about worker or a service that depends on it",
+                "supporting evidence from 1 source(s), need 2",
+                "refuting evidence outweighs supporting evidence"
+              ],
+              "mechanism": "Worker is incorrectly calculating VAT as amount * 10 instead of amount * 0.15 when writing to invoices table, which sync-job then faithfully copies to ledger"
+            }
+          ],
+          "evidence": {
+            "E11": {
+              "source": "logs",
+              "claim": "log search service=worker level=ERROR contains='invoice': 0 records; latest: []",
+              "call": "T102"
+            },
+            "E12": {
+              "source": "database",
+              "claim": "SQL `SELECT i.order_id, i.amount, i.vat, i.total, l.amount as ledger_amount, l.vat as ledger_vat, l.total as ledger_total FROM invoices i JOIN ledger l ON i.order_id = l.order_id WHERE ROUND(l.total, 2) != ROUND(l.amount +...` returned 5 rows: [{\"order_id\": \"ORD-01274\", \"amount\": \"255.27\", \"vat\": \"1701.82\", \"total\": \"1957.09\", \"ledger_amount\": \"255.27\", \"ledger_vat\": \"1701.82\", \"ledger_total\": \"1957.09\"}, {\"order_id\": \"ORD-01278\", \"amount\": \"567.94\", \"vat\": \"3786.29\", \"total\": \"4354.23\", \"ledger_amount\": \"567.94\", \"ledger_vat\": \"3786.29\", \"ledger_total\": \"4354.23\"}, {\"order_id\": \"ORD-01280\", \"amount\": \"177.11\", \"vat\": \"1180.71\", \"total\": \"1357.82\", \"ledger_amount\": \"177.11\", \"ledger_vat\": \"1180.71\", \"ledger_total\": \"1357.82\"}, {\"order_id\": \"ORD-01287\", \"amount\": \"738.23\", \"vat\": \"4921.52\", \"total\": \"5659.75\", \"ledger_amount\": \"73...",
+              "call": "T103"
+            }
+          }
+        },
+        {
+          "t": 750,
+          "event": "ruled_out",
+          "service": "invoice-agent",
+          "persisting": [
+            "I3_ledger_integrity"
+          ]
+        },
+        {
+          "t": 750,
+          "event": "action",
+          "action": "restart_service",
+          "params": {
+            "service": "worker"
+          },
+          "result": {
+            "ok": true,
+            "service": "worker",
+            "connections_released": 0
+          }
+        },
+        {
+          "t": 810,
+          "event": "reopened",
+          "signals": [
+            "I3_ledger_integrity",
+            "I4_workflow_progress"
+          ]
+        },
+        {
+          "t": 810,
+          "event": "refuted",
+          "service": "worker",
+          "kind": "runtime_fault",
+          "reason": "worker was treated as runtime_fault at t=750, but I3_ledger_integrity persisted"
+        },
+        {
+          "t": 810,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "logs",
+              "service": "workflow",
+              "level": "ERROR",
+              "contains": "supplier",
+              "why": "Check if workflow is failing to communicate with supplier-api for approvals"
+            },
+            {
+              "tool": "sql",
+              "query": "SELECT * FROM approvals WHERE resolved_at IS NULL AND callback_due < :now - 300",
+              "why": "Find overdue approval requests to understand I4_workflow_progress violation"
+            }
+          ],
+          "evidence": [
+            "E13 [logs] (workflow) log search service=workflow level=ERROR contains='supplier': 0 records; latest: []",
+            "E14 [database] (workflow) SQL `SELECT * FROM approvals WHERE resolved_at IS NULL AND callback_due < :now - 300` returned 0 rows: []"
+          ],
+          "notes": []
+        },
+        {
+          "t": 810,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT * FROM ledger WHERE ABS(vat - (amount * 0.15)) > 0.01 OR ABS(total - (amount + vat)) > 0.01 ORDER BY synced_at",
+              "why": "Examine the invalid ledger rows to find pattern in timing or source"
+            }
+          ],
+          "evidence": [
+            "E15 [database] (sync-job) SQL `SELECT * FROM ledger WHERE ABS(vat - (amount * 0.15)) > 0.01 OR ABS(total - (amount + vat)) > 0.01 ORDER BY synced_at` returned 18 rows: [{\"order_id\": \"ORD-01274\", \"amount\": \"255.27\", \"vat\": \"1701.82\", \"total\": \"1957.09\", \"synced_at\": \"645\"}, {\"order_id\": \"ORD-01278\", \"amount\": \"567.94\", \"vat\": \"3786.29\", \"total\": \"4354.23\", \"synced_at\": \"645\"}, {\"order_id\": \"ORD-01280\", \"amount\": \"177.11\", \"vat\": \"1180.71\", \"total\": \"1357.82\", \"synced_at\": \"645\"}, {\"order_id\": \"ORD-01287\", \"amount\": \"738.23\", \"vat\": \"4921.52\", \"total\": \"5659.75\", \"synced_at\": \"645\"}, {\"order_id\": \"ORD-01289\", \"amount\": \"423.25\", \"vat\": \"2821.69\", \"total\": \"3244.94\", \"synced_at\": \"645\"}, {\"order_id\": \"ORD-01303\", \"amount\": \"453.5\", \"vat\": \"3023.3\", \"total\": ..."
+          ],
+          "notes": []
+        },
+        {
+          "t": 810,
+          "event": "hypotheses",
+          "round": 4,
+          "summary": "Database runtime fault causing ledger calculation errors",
+          "verdicts": [
+            {
+              "service": "database",
+              "kind": "runtime_fault",
+              "proven": true,
+              "sources": [
+                "database"
+              ],
+              "supporting": [
+                "E1",
+                "E15"
+              ],
+              "refuting": [
+                "E3"
+              ],
+              "problems": [
+                "supporting evidence from 1 source(s), need 2"
+              ],
+              "mechanism": "Database corruption or miscalculation affecting VAT and total computations in ledger sync operations"
+            }
+          ],
+          "evidence": {
+            "E1": {
+              "source": "database",
+              "claim": "invariant I3_ledger_integrity violated by 18 rows: Ledger rows respect VAT = 15% of amount and total = amount + VAT",
+              "call": "T112"
+            },
+            "E3": {
+              "source": "database",
+              "claim": "these invariants hold: I1_payment_has_order, I2_no_orphaned_orders, I5_single_payment, I6_retry_budget, I7_payments_succeed",
+              "call": "T112"
+            },
+            "E15": {
+              "source": "database",
+              "claim": "SQL `SELECT * FROM ledger WHERE ABS(vat - (amount * 0.15)) > 0.01 OR ABS(total - (amount + vat)) > 0.01 ORDER BY synced_at` returned 18 rows: [{\"order_id\": \"ORD-01274\", \"amount\": \"255.27\", \"vat\": \"1701.82\", \"total\": \"1957.09\", \"synced_at\": \"645\"}, {\"order_id\": \"ORD-01278\", \"amount\": \"567.94\", \"vat\": \"3786.29\", \"total\": \"4354.23\", \"synced_at\": \"645\"}, {\"order_id\": \"ORD-01280\", \"amount\": \"177.11\", \"vat\": \"1180.71\", \"total\": \"1357.82\", \"synced_at\": \"645\"}, {\"order_id\": \"ORD-01287\", \"amount\": \"738.23\", \"vat\": \"4921.52\", \"total\": \"5659.75\", \"synced_at\": \"645\"}, {\"order_id\": \"ORD-01289\", \"amount\": \"423.25\", \"vat\": \"2821.69\", \"total\": \"3244.94\", \"synced_at\": \"645\"}, {\"order_id\": \"ORD-01303\", \"amount\": \"453.5\", \"vat\": \"3023.3\", \"total\": ...",
+              "call": "T119"
+            }
+          }
+        },
+        {
+          "t": 810,
+          "event": "ruled_out",
+          "service": "worker",
+          "persisting": [
+            "I3_ledger_integrity"
+          ]
+        },
+        {
+          "t": 810,
+          "event": "action",
+          "action": "restart_service",
+          "params": {
+            "service": "database"
+          },
+          "result": {
+            "ok": true,
+            "service": "database",
+            "connections_released": 0
+          }
+        },
+        {
+          "t": 870,
+          "event": "reopened",
+          "signals": [
+            "I3_ledger_integrity",
+            "I4_workflow_progress"
+          ]
+        },
+        {
+          "t": 870,
+          "event": "refuted",
+          "service": "database",
+          "kind": "runtime_fault",
+          "reason": "database was treated as runtime_fault at t=810, but I3_ledger_integrity persisted"
+        },
+        {
+          "t": 870,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "logs",
+              "service": "workflow",
+              "level": "ERROR",
+              "contains": "supplier-api",
+              "why": "Check if workflow is failing to call supplier-api for approvals"
+            },
+            {
+              "tool": "sql",
+              "query": "SELECT * FROM approvals WHERE resolved_at IS NULL AND callback_due < :now - 300 ORDER BY callback_due LIMIT 10",
+              "why": "Examine overdue approval requests to see if they are stuck waiting for supplier-api"
+            }
+          ],
+          "evidence": [
+            "E13 [logs] (workflow) log search service=workflow level=ERROR contains='supplier-api': 0 records; latest: []",
+            "E14 [database] (workflow) SQL `SELECT * FROM approvals WHERE resolved_at IS NULL AND callback_due < :now - 300 ORDER BY callback_due LIMIT 10` returned 0 rows: []"
+          ],
+          "notes": []
+        },
+        {
+          "t": 870,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT * FROM approvals WHERE resolved_at IS NULL AND callback_due < :now ORDER BY callback_due LIMIT 10",
+              "why": "Check all pending approval requests to understand workflow progress violations"
+            }
+          ],
+          "evidence": [
+            "E15 [database] (workflow) SQL `SELECT * FROM approvals WHERE resolved_at IS NULL AND callback_due < :now ORDER BY callback_due LIMIT 10` returned 0 rows: []"
+          ],
+          "notes": []
+        },
+        {
+          "t": 870,
+          "event": "hypotheses",
+          "round": 5,
+          "summary": "Two independent root causes: workflow deploy bug causing approval delays, and worker runtime fault causing ledger integrity violations",
+          "verdicts": [
+            {
+              "service": "workflow",
+              "kind": "bad_deploy",
+              "proven": true,
+              "sources": [
+                "database",
+                "deploys"
+              ],
+              "supporting": [
+                "E2",
+                "E4"
+              ],
+              "refuting": [
+                "E13",
+                "E14",
+                "E15"
+              ],
+              "problems": [
+                "refuting evidence outweighs supporting evidence"
+              ],
+              "mechanism": "Deploy workflow v1.1 at t=506 introduced a bug that prevents approval requests from being properly created or processed"
+            },
+            {
+              "service": "worker",
+              "kind": "runtime_fault",
+              "proven": false,
+              "sources": [
+                "database"
+              ],
+              "supporting": [
+                "E3"
+              ],
+              "refuting": [
+                "E7"
+              ],
+              "problems": [
+                "E1 is not about worker or a service that depends on it",
+                "supporting evidence from 1 source(s), need 2",
+                "refuting evidence outweighs supporting evidence",
+                "refuted by experiment: worker was treated as runtime_fault at t=750, but I3_ledger_integrity persisted"
+              ],
+              "mechanism": "Worker process is stuck in a state where it fails to properly calculate VAT and total amounts when writing to invoices table"
+            }
+          ],
+          "evidence": {
+            "E2": {
+              "source": "database",
+              "claim": "invariant I4_workflow_progress violated by 43 rows: No paid order waits for supplier approval longer than 5 minutes",
+              "call": "T128"
+            },
+            "E3": {
+              "source": "database",
+              "claim": "these invariants hold: I1_payment_has_order, I2_no_orphaned_orders, I5_single_payment, I6_retry_budget, I7_payments_succeed",
+              "call": "T128"
+            },
+            "E4": {
+              "source": "deploys",
+              "claim": "deploy workflow v1.1 at t=506 (34 s before the first anomaly, t=540): \"approval client refactor\"",
+              "call": "T131"
+            },
+            "E7": {
+              "source": "deploys",
+              "claim": "no deploy of sync-job since t=0",
+              "call": "T131"
+            },
+            "E13": {
+              "source": "logs",
+              "claim": "log search service=workflow level=ERROR contains='supplier-api': 0 records; latest: []",
+              "call": "T133"
+            },
+            "E14": {
+              "source": "database",
+              "claim": "SQL `SELECT * FROM approvals WHERE resolved_at IS NULL AND callback_due < :now - 300 ORDER BY callback_due LIMIT 10` returned 0 rows: []",
+              "call": "T134"
+            },
+            "E15": {
+              "source": "database",
+              "claim": "SQL `SELECT * FROM approvals WHERE resolved_at IS NULL AND callback_due < :now ORDER BY callback_due LIMIT 10` returned 0 rows: []",
+              "call": "T135"
+            }
+          }
+        },
+        {
+          "t": 870,
+          "event": "ruled_out",
+          "service": "database",
+          "persisting": [
+            "I3_ledger_integrity"
+          ]
+        },
+        {
+          "t": 870,
+          "event": "action",
+          "action": "rollback_service",
+          "params": {
+            "service": "workflow"
+          },
+          "result": {
+            "ok": true,
+            "service": "workflow",
+            "from": "v1.1",
+            "to": "v1.0"
+          }
+        },
+        {
+          "t": 870,
+          "event": "action",
+          "action": "rerequest_supplier_approvals",
+          "params": {},
+          "result": {
+            "ok": true,
+            "rerequested": 292
+          }
+        },
+        {
+          "t": 930,
+          "event": "reopened",
+          "signals": [
+            "I3_ledger_integrity"
+          ]
+        },
+        {
+          "t": 930,
+          "event": "escalated",
+          "reason": "symptoms remain after 5 rounds"
+        },
+        {
+          "t": 930,
+          "event": "report",
+          "root_causes": [
+            {
+              "service": "workflow",
+              "kind": "bad_deploy"
+            }
+          ],
+          "evidence": [
+            "T54",
+            "T59",
+            "T61",
+            "T80",
+            "T83",
+            "T87",
+            "T103",
+            "T112",
+            "T119",
+            "T128",
+            "T131"
+          ],
+          "actions": [
+            "t=540: restart_service {'service': 'sync-job'} -> {'ok': True, 'service': 'sync-job', 'connections_released': 0}",
+            "t=540: resync_ledger  -> {'ok': True, 'fixed': 3}",
+            "t=570: resync_ledger  -> {'ok': True, 'fixed': 5}",
+            "t=600: resync_ledger  -> {'ok': True, 'fixed': 5}",
+            "t=630: resync_ledger  -> {'ok': True, 'fixed': 2}",
+            "t=690: experiment refuted sync-job (runtime_fault): sync-job was treated as runtime_fault at t=540, but I3_ledger_integrity persisted",
+            "t=690: sync-job ruled out: its fix ran but I3_ledger_integrity persisted",
+            "t=690: rollback_service {'service': 'invoice-agent'} -> {'ok': True, 'service': 'invoice-agent', 'from': 'v1.1', 'to': 'v1.0'}",
+            "t=750: experiment refuted invoice-agent (bad_deploy): invoice-agent was treated as bad_deploy at t=690, but I3_ledger_integrity persisted",
+            "t=750: invoice-agent ruled out: its fix ran but I3_ledger_integrity persisted",
+            "t=750: restart_service {'service': 'worker'} -> {'ok': True, 'service': 'worker', 'connections_released': 0}",
+            "t=810: experiment refuted worker (runtime_fault): worker was treated as runtime_fault at t=750, but I3_ledger_integrity persisted",
+            "t=810: worker ruled out: its fix ran but I3_ledger_integrity persisted",
+            "t=810: restart_service {'service': 'database'} -> {'ok': True, 'service': 'database', 'connections_released': 0}",
+            "t=870: experiment refuted database (runtime_fault): database was treated as runtime_fault at t=810, but I3_ledger_integrity persisted",
+            "t=870: database ruled out: its fix ran but I3_ledger_integrity persisted",
+            "t=870: rollback_service {'service': 'workflow'} -> {'ok': True, 'service': 'workflow', 'from': 'v1.1', 'to': 'v1.0'}",
+            "t=870: rerequest_supplier_approvals  -> {'ok': True, 'rerequested': 292}"
+          ],
+          "escalated": true,
+          "recovered": false,
+          "reason": "symptoms remain after 5 rounds"
+        }
+      ],
+      "cost_usd": 0.00761,
+      "llm_calls": 15,
+      "success": false
+    },
+    {
+      "scenario": "val_stuck_worker_no_deploy",
+      "split": "validation",
+      "family": "early_ack",
+      "seed": 1,
+      "agent": "raqib_no_ledger",
+      "onset": 430,
+      "fixable": true,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 150,
+      "mttr": 150,
+      "root_cause_correct": true,
+      "root_cause_recall": 1.0,
+      "recovered": true,
+      "escalated": false,
+      "escalation_correct": true,
+      "harmful_actions": 0,
+      "unnecessary_actions": 0,
+      "actions": [
+        {
+          "ts": 150,
+          "action": "restart_service",
+          "params": {
+            "service": "worker"
+          }
+        },
+        {
+          "ts": 150,
+          "action": "requeue_orphaned_orders",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "worker",
+          "kind": "resource_exhaustion"
+        }
+      ],
+      "final_violations": [],
+      "stable": true,
+      "recovery_claim": true,
+      "false_recovery_claim": false,
+      "false_failure_claim": false,
+      "evidence_cited": 4,
+      "evidence_valid": 4,
+      "invalid_evidence": [],
+      "timeline": [
+        {
+          "t": 580,
+          "event": "incident",
+          "signals": [
+            "I2_no_orphaned_orders"
+          ]
+        },
+        {
+          "t": 580,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "logs",
+              "service": "worker",
+              "level": "ERROR",
+              "contains": "health check",
+              "why": "Confirm if worker health check failures are due to resource exhaustion or other errors"
+            },
+            {
+              "tool": "sql",
+              "query": "SELECT service, COUNT(*) as open_connections FROM db_sessions WHERE open = 1 GROUP BY service",
+              "why": "Check for database connection exhaustion, which could cause worker failures and queue backlog"
+            }
+          ],
+          "evidence": [
+            "E31 [logs] (worker) log search service=worker level=ERROR contains='health check': 0 records; latest: []",
+            "E32 [database] (database, order-service, payment-service, sync-job, worker, workflow) SQL `SELECT service, COUNT(*) as open_connections FROM db_sessions WHERE open = 1 GROUP BY service` returned 5 rows: [{\"service\": \"order-service\", \"open_connections\": \"1\"}, {\"service\": \"payment-service\", \"open_connections\": \"1\"}, {\"service\": \"sync-job\", \"open_connections\": \"1\"}, {\"service\": \"worker\", \"open_connections\": \"1\"}, {\"service\": \"workflow\", \"open_connections\": \"1\"}]"
+          ],
+          "notes": []
+        },
+        {
+          "t": 580,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "metrics",
+              "service": "worker",
+              "metric": "worker_cpu_usage",
+              "why": "Check if worker CPU usage is high, indicating resource exhaustion causing restarts"
+            }
+          ],
+          "evidence": [],
+          "notes": [
+            "unknown tool metrics"
+          ]
+        },
+        {
+          "t": 580,
+          "event": "hypotheses",
+          "round": 1,
+          "summary": "Worker resource exhaustion causes frequent restarts and order processing delays",
+          "verdicts": [
+            {
+              "service": "worker",
+              "kind": "resource_exhaustion",
+              "proven": true,
+              "sources": [
+                "database",
+                "logs",
+                "metrics"
+              ],
+              "supporting": [
+                "E10",
+                "E11",
+                "E13",
+                "E1"
+              ],
+              "refuting": [
+                "E19",
+                "E31",
+                "E32"
+              ],
+              "problems": [],
+              "mechanism": "Worker processes are restarting due to health check failures (likely CPU or memory exhaustion), causing a backlog of unprocessed orders in the queue"
+            }
+          ],
+          "evidence": {
+            "E1": {
+              "source": "database",
+              "claim": "invariant I2_no_orphaned_orders violated by 33 rows: Every new order is picked up for processing within 2 minutes",
+              "call": "T62"
+            },
+            "E10": {
+              "source": "metrics",
+              "claim": "queue_depth rose above its baseline (max 0) at t=460, peak 746 at t=570, now 688",
+              "call": "T63"
+            },
+            "E11": {
+              "source": "metrics",
+              "claim": "worker_restarts rate rose from 0.00/s (baseline) starting t=460, peak 2.55/s at t=570, now 2.53/s",
+              "call": "T63"
+            },
+            "E13": {
+              "source": "logs",
+              "claim": "INFO worker \"worker process restarted\" (reason=health check): 292 times, first t=453, last t=580, never seen in the baseline",
+              "call": "T64"
+            },
+            "E19": {
+              "source": "deploys",
+              "claim": "no deploy of worker since t=0",
+              "call": "T65"
+            },
+            "E31": {
+              "source": "logs",
+              "claim": "log search service=worker level=ERROR contains='health check': 0 records; latest: []",
+              "call": "T67"
+            },
+            "E32": {
+              "source": "database",
+              "claim": "SQL `SELECT service, COUNT(*) as open_connections FROM db_sessions WHERE open = 1 GROUP BY service` returned 5 rows: [{\"service\": \"order-service\", \"open_connections\": \"1\"}, {\"service\": \"payment-service\", \"open_connections\": \"1\"}, {\"service\": \"sync-job\", \"open_connections\": \"1\"}, {\"service\": \"worker\", \"open_connections\": \"1\"}, {\"service\": \"workflow\", \"open_connections\": \"1\"}]",
+              "call": "T68"
+            }
+          }
+        },
+        {
+          "t": 580,
+          "event": "action",
+          "action": "restart_service",
+          "params": {
+            "service": "worker"
+          },
+          "result": {
+            "ok": true,
+            "service": "worker",
+            "connections_released": 0
+          }
+        },
+        {
+          "t": 580,
+          "event": "action",
+          "action": "requeue_orphaned_orders",
+          "params": {},
+          "result": {
+            "ok": true,
+            "requeued": 292
+          }
+        },
+        {
+          "t": 910,
+          "event": "stable",
+          "window": 330
+        },
+        {
+          "t": 910,
+          "event": "report",
+          "root_causes": [
+            {
+              "service": "worker",
+              "kind": "resource_exhaustion"
+            }
+          ],
+          "evidence": [
+            "T63",
+            "T63",
+            "T64",
+            "T62"
+          ],
+          "actions": [
+            "t=580: restart_service {'service': 'worker'} -> {'ok': True, 'service': 'worker', 'connections_released': 0}",
+            "t=580: requeue_orphaned_orders  -> {'ok': True, 'requeued': 292}"
+          ],
+          "escalated": false,
+          "recovered": true,
+          "reason": "stable for 330 s: every check clean"
+        }
+      ],
+      "cost_usd": 0.0,
+      "llm_calls": 3,
+      "success": true
+    },
+    {
+      "scenario": "val_supplier_outage",
+      "split": "validation",
+      "family": "callback_lost",
+      "seed": 1,
+      "agent": "raqib_no_ledger",
+      "onset": 464,
+      "fixable": false,
+      "detected": true,
+      "false_alarm": false,
+      "mttd": 306,
+      "mttr": null,
+      "root_cause_correct": false,
+      "root_cause_recall": 0.0,
+      "recovered": null,
+      "escalated": false,
+      "escalation_correct": false,
+      "harmful_actions": 0,
+      "unnecessary_actions": 1,
+      "actions": [
+        {
+          "ts": 306,
+          "action": "restart_service",
+          "params": {
+            "service": "workflow"
+          }
+        },
+        {
+          "ts": 306,
+          "action": "rerequest_supplier_approvals",
+          "params": {}
+        },
+        {
+          "ts": 636,
+          "action": "rerequest_supplier_approvals",
+          "params": {}
+        },
+        {
+          "ts": 966,
+          "action": "rerequest_supplier_approvals",
+          "params": {}
+        },
+        {
+          "ts": 1296,
+          "action": "rerequest_supplier_approvals",
+          "params": {}
+        }
+      ],
+      "diagnosis": [
+        {
+          "service": "workflow",
+          "kind": "runtime_fault"
+        }
+      ],
+      "final_violations": [
+        "I4_workflow_progress"
+      ],
+      "stable": false,
+      "recovery_claim": false,
+      "false_recovery_claim": false,
+      "false_failure_claim": false,
+      "evidence_cited": 2,
+      "evidence_valid": 2,
+      "invalid_evidence": [],
+      "timeline": [
+        {
+          "t": 770,
+          "event": "incident",
+          "signals": [
+            "I4_workflow_progress"
+          ]
+        },
+        {
+          "t": 770,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "logs",
+              "service": "workflow",
+              "level": "ERROR",
+              "contains": "supplier",
+              "why": "Check for errors contacting supplier-api to see if it's unavailable"
+            },
+            {
+              "tool": "sql",
+              "query": "SELECT COUNT(*) FROM approvals WHERE resolved_at IS NULL AND callback_due < :now - 300",
+              "why": "Count overdue approvals to confirm workflow is stuck waiting for supplier responses"
+            }
+          ],
+          "evidence": [
+            "E8 [logs] (workflow) log search service=workflow level=ERROR contains='supplier': 0 records; latest: []",
+            "E9 [database] (workflow) SQL `SELECT COUNT(*) FROM approvals WHERE resolved_at IS NULL AND callback_due < :now - 300` returned 1 rows: [{\"COUNT(*)\": \"0\"}]"
+          ],
+          "notes": []
+        },
+        {
+          "t": 770,
+          "event": "investigated",
+          "requests": [
+            {
+              "tool": "sql",
+              "query": "SELECT COUNT(*) FROM approvals WHERE resolved_at IS NULL AND callback_due < :now",
+              "why": "Check if there are any unresolved approvals currently overdue to understand the workflow delay pattern"
+            }
+          ],
+          "evidence": [
+            "E10 [database] (workflow) SQL `SELECT COUNT(*) FROM approvals WHERE resolved_at IS NULL AND callback_due < :now` returned 1 rows: [{\"COUNT(*)\": \"0\"}]"
+          ],
+          "notes": []
+        },
+        {
+          "t": 770,
+          "event": "hypotheses",
+          "round": 1,
+          "summary": "Workflow service runtime fault causing processing delays despite healthy dependencies",
+          "verdicts": [
+            {
+              "service": "workflow",
+              "kind": "runtime_fault",
+              "proven": true,
+              "sources": [
+                "database",
+                "metrics"
+              ],
+              "supporting": [
+                "E1",
+                "E3"
+              ],
+              "refuting": [
+                "E4",
+                "E8",
+                "E9",
+                "E10"
+              ],
+              "problems": [
+                "refuting evidence outweighs supporting evidence"
+              ],
+              "mechanism": "Workflow service process is stuck in a bad state causing delays in processing supplier approvals despite no overdue approvals"
+            }
+          ],
+          "evidence": {
+            "E1": {
+              "source": "database",
+              "claim": "invariant I4_workflow_progress violated by 3 rows: No paid order waits for supplier approval longer than 5 minutes",
+              "call": "T100"
+            },
+            "E3": {
+              "source": "metrics",
+              "claim": "orders_fulfilled rate fell from 1.82/s (baseline) starting t=550, lowest 0.93/s at t=690, now 1.02/s",
+              "call": "T101"
+            },
+            "E4": {
+              "source": "deploys",
+              "claim": "no deploy of workflow since t=0",
+              "call": "T103"
+            },
+            "E8": {
+              "source": "logs",
+              "claim": "log search service=workflow level=ERROR contains='supplier': 0 records; latest: []",
+              "call": "T105"
+            },
+            "E9": {
+              "source": "database",
+              "claim": "SQL `SELECT COUNT(*) FROM approvals WHERE resolved_at IS NULL AND callback_due < :now - 300` returned 1 rows: [{\"COUNT(*)\": \"0\"}]",
+              "call": "T106"
+            },
+            "E10": {
+              "source": "database",
+              "claim": "SQL `SELECT COUNT(*) FROM approvals WHERE resolved_at IS NULL AND callback_due < :now` returned 1 rows: [{\"COUNT(*)\": \"0\"}]",
+              "call": "T107"
+            }
+          }
+        },
+        {
+          "t": 770,
+          "event": "action",
+          "action": "restart_service",
+          "params": {
+            "service": "workflow"
+          },
+          "result": {
+            "ok": true,
+            "service": "workflow",
+            "connections_released": 0
+          }
+        },
+        {
+          "t": 770,
+          "event": "action",
+          "action": "rerequest_supplier_approvals",
+          "params": {},
+          "result": {
+            "ok": true,
+            "rerequested": 326
+          }
+        },
+        {
+          "t": 1100,
+          "event": "action",
+          "action": "rerequest_supplier_approvals",
+          "params": {},
+          "result": {
+            "ok": true,
+            "rerequested": 487
+          }
+        },
+        {
+          "t": 1430,
+          "event": "action",
+          "action": "rerequest_supplier_approvals",
+          "params": {},
+          "result": {
+            "ok": true,
+            "rerequested": 580
+          }
+        },
+        {
+          "t": 1760,
+          "event": "action",
+          "action": "rerequest_supplier_approvals",
+          "params": {},
+          "result": {
+            "ok": true,
+            "rerequested": 624
+          }
+        },
+        {
+          "t": 1800,
+          "event": "report",
+          "root_causes": [
+            {
+              "service": "workflow",
+              "kind": "runtime_fault"
+            }
+          ],
+          "evidence": [
+            "T100",
+            "T101"
+          ],
+          "actions": [
+            "t=770: restart_service {'service': 'workflow'} -> {'ok': True, 'service': 'workflow', 'connections_released': 0}",
+            "t=770: rerequest_supplier_approvals  -> {'ok': True, 'rerequested': 326}",
+            "t=1100: rerequest_supplier_approvals  -> {'ok': True, 'rerequested': 487}",
+            "t=1430: rerequest_supplier_approvals  -> {'ok': True, 'rerequested': 580}",
+            "t=1760: rerequest_supplier_approvals  -> {'ok': True, 'rerequested': 624}"
+          ],
+          "escalated": false,
+          "recovered": false,
+          "reason": "time budget used up before recovery was verified"
+        }
+      ],
+      "cost_usd": 0.0,
+      "llm_calls": 3,
+      "success": false
+    }
+  ]
+}

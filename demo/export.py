@@ -20,7 +20,7 @@ from harness.generator import SPLITS, scenario_file  # noqa: E402
 
 SPLIT_ORDER = ["dev", "gen-dev", "validation", "gen-validation", "heldout", "gen-heldout"]
 AGENT_ORDER = ["null", "rule_based", "llm_single_shot", "raqib", "raqib_no_ledger", "oracle"]
-LIBRARY_SPLITS = ["heldout", "gen-heldout", "gen-dev", "dev"]   # newest evidence first
+LIBRARY_SPLITS = ["gen-heldout", "heldout", "validation", "gen-dev"]   # final held-out runs first
 MAX_TEXT = 260
 
 
