@@ -62,12 +62,12 @@ def _responder(fix, supporting_patterns):
     return respond
 
 
-def _run(responder, scenario="dev_payment_swallow"):
+def _run(responder, scenario="dev_payment_swallow", **flags):
     fake = FakeLLM(responder)
     agent_box = {}
 
     def factory(**kw):
-        agent_box["a"] = RaqibAgent(llm=fake, **kw)
+        agent_box["a"] = RaqibAgent(llm=fake, **flags, **kw)
         return agent_box["a"]
     return run_one(DEV[scenario], "dev", factory, seed=1), agent_box["a"]
 
@@ -152,9 +152,39 @@ def test_a_fix_that_changes_nothing_refutes_its_cause():
             {"service": "payment-service", "kind": "runtime_fault", "mechanism": "stuck",
              "supporting": support[:2], "refuting": [], "explains": ["I1_payment_has_order"],
              "repair_plan": [{"action": "restart_service", "params": {"service": "payment-service"}}]}]})
-    r, agent = _run(respond)
+    r, agent = _run(respond, discriminate=False)     # without the deploy-first test, so the restart runs
     events = [e["event"] for e in agent.timeline]
     assert "refuted" in events
     restarts = [a for a in r.actions if a["action"] == "restart_service"]
     assert len(restarts) == 1                      # never repeats the refuted fix
     assert r.escalated and r.recovery_claim is False
+
+
+def test_deploy_first_blocks_a_restart_until_the_deploy_is_tested():
+    led = Ledger(TOPOLOGY)
+    led.add("database", "invariant", ["payment-service"], "I1 violated", ts=520)            # E1
+    led.add("deploys", "deploy", ["payment-service"], "deploy payment-service", ts=500)     # E2
+    led.add("logs", "log_signature", ["payment-service"], "WARN ...", ts=525)              # E3
+    h = {"service": "payment-service", "kind": "runtime_fault", "supporting": ["E1", "E3"]}
+    v = led.assess(h)
+    led.deploy_first([v], refuted=set())
+    assert not v.proven and any(p.startswith("deploy first") for p in v.problems)
+    v2 = led.assess(h)
+    led.deploy_first([v2], refuted={("payment-service", "bad_deploy")})   # rollback was tried and failed
+    assert v2.proven
+
+
+def test_damage_that_keeps_coming_back_reopens_the_incident():
+    # the model blames the right service with the wrong fix; repairs alone would hide that
+    def respond(messages):
+        text = "\n".join(m["content"] for m in messages if m["role"] == "user")
+        support = _ids(text, r"invariant I1_payment_has_order violated") + _ids(text, r"deploy payment-service v1\.1")
+        return json.dumps({"investigate": [], "summary": "t", "hypotheses": [
+            {"service": "payment-service", "kind": "runtime_fault", "mechanism": "stuck",
+             "supporting": support[:2], "refuting": [], "explains": ["I1_payment_has_order"],
+             "repair_plan": [{"action": "restart_service", "params": {"service": "payment-service"}}]}]})
+    r, agent = _run(respond, discriminate=False)
+    events = [e["event"] for e in agent.timeline]
+    assert "recurring_damage" in events and "refuted" in events
+    replays = [a for a in r.actions if a["action"] == "replay_payment_confirmations"]
+    assert len(replays) <= 3                      # it stops masking the symptom

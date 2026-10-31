@@ -239,3 +239,44 @@ gen-validation, seed 1: Raqib 38.3% (3 false recovery claims of 60), rule-based 
 Seeds actually used: held-out 3; dev, gen-dev, validation, gen-validation 1 for Raqib
 (rule-based 3 on the generated sets); one ablation (no Evidence Ledger) instead of four.
 LLM single shot was not re-run. All result files are in `reports/final/`.
+
+## 2026-10-31 · Agent v2 (time box: 2 hours), frozen before its held-out run
+What was known before v2 work started, recorded for transparency:
+- v1's final held-out results (aggregates and the per-group breakdown in the entry above,
+  including the database-restart weakness in leak and disk scenarios) were already reported.
+- One gen-heldout incident's timeline was seen while reviewing the first demo page (the demo
+  opened on a recorded gen-heldout run).
+Because of this, gen-heldout is no longer a clean test for any later version.
+`scenarios/gen_heldout_v2.yaml` (same generator, same held-out mechanisms, new seeds from
+400000) was generated and sealed in commit `3a5334c` before any v2 change. v2 is judged on it.
+
+Failure analysis for v2 used only gen-dev and gen-validation runs of v1 (76 failures). No
+held-out trace or result file was opened for it. Two general causes:
+1. **Repairs masked a cause that was still active.** After a fix, the watch loop kept re-running
+   the data repair (e.g. re-sending approval requests), which cleared the invariant for a few
+   minutes each time, so the experiment never concluded: the agent neither refuted the wrong
+   cause nor looked for a second one, and ran out of rounds or time. Most "gave up after 5
+   rounds" and "time budget used up" failures, and every missed external supplier outage.
+2. **Restart chosen while a deploy of the same service preceded the symptoms** (10 cases).
+
+Changes (general, no scenario-specific code; anti-cheat and leak tests pass):
+- Recurring damage: while watching one fix, a data repair may run once more per invariant
+  (work already in flight); if the damage comes back after that, the incident reopens with
+  those symptoms instead of repairing again. The reopened round is told which symptoms the
+  fixed causes do not explain, so it opens a new hypothesis.
+- Deploy first (discriminating test in the ledger): a runtime_fault / resource_exhaustion
+  hypothesis is rejected while a deploy of that service preceded its symptoms, until the
+  deploy explanation has been refuted by experiment. So rollback is tested before restart.
+- Reasoner rule: a cause refuted by experiment is not the answer; look at what else explains
+  the persisting symptoms, including its dependencies, and escalate external ones.
+- Tests: deploy-first, recurring damage reopens the incident; the refutation test now runs
+  with discriminating tests off (with them on, the deploy-first test blocks that restart).
+
+gen-validation, seed 1 (also used in the failure analysis above, so it is not a clean check):
+| Version | Success | 1 fault | 2 faults | 3 faults | Unfixable | False recovery claims | Cost |
+|---------|---------|---------|----------|----------|-----------|-----------------------|------|
+| Rule-based | 23.3% | 40% | 0% | 0% | 0% | 21 | $0 |
+| v1 | 38.3% | 54% | 18% | 0% | 0% | 3 | $0.26 |
+| v2 | 63.3% | 80% | 41% | 33% | 30% | 3 | $0.19 |
+The improvement is clear, so v2 is frozen at this commit and run once on gen_heldout_v2
+(`--final`, 3 seeds), with rule-based, Null and Oracle on the same set.

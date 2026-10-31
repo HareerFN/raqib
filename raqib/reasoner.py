@@ -25,6 +25,9 @@ How to reason
   unrelated services, are decoys. No deploy means the cause is not a bad deploy.
 - Errors saying a dependency is unavailable point to that dependency, not to the service
   that logs them.
+- A cause refuted by an experiment (its fix ran, the symptoms stayed) is not the answer: look
+  at what else explains the persisting symptoms, including the services it depends on, and
+  external services among them, which cannot be fixed from here and must be escalated.
 - Ask for evidence that tells competing explanations apart, e.g. which table holds the first
   bad rows, or when a symptom started compared with each deploy.
 - Cite evidence only by id. For each hypothesis list supporting AND refuting evidence. Code

@@ -155,6 +155,28 @@ class Ledger:
                     break
         return verdicts
 
+    def deploy_first(self, verdicts: list[Verdict], refuted: set) -> list[Verdict]:
+        """Discriminating test, "what changed?": when the suspect service was deployed before its
+        symptoms began, test the deploy (rollback) before treating it as a stuck process (restart).
+        A restart is allowed once the deploy explanation has been refuted by experiment."""
+        if not self.discriminate:
+            return verdicts
+        for v in verdicts:
+            if not v.proven or v.kind not in ("runtime_fault", "resource_exhaustion"):
+                continue
+            if {(v.service, "bad_deploy"), (v.service, "config_change")} & refuted:
+                continue
+            deploys = [e.ts for e in self.of_kind("deploy") if e.services == [v.service]
+                       and not e.data.get("rollback") and e.ts is not None]
+            starts = [self.items[i].ts for i in v.supporting if self.items[i].ts is not None
+                      and self.items[i].kind not in ("deploy", "no_deploy", "topology")
+                      and v.service in self.items[i].services]
+            if deploys and (not starts or min(deploys) <= min(starts) + DEPLOY_TOLERANCE):
+                v.proven = False
+                v.problems.append(f"deploy first: {v.service} was deployed at t={min(deploys)}, before its "
+                                  "symptoms began; test bad_deploy (rollback) before a restart")
+        return verdicts
+
     def _timing_check(self, svc: str, kind: str, supporting: list[str]) -> list[str]:
         """Discriminating test for a deploy: did the symptoms of this service start after it?
         A deploy that lands after the service was already misbehaving cannot be the cause."""

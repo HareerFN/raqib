@@ -30,6 +30,7 @@ MAX_ROUNDS = 5            # attempt budget: diagnosis rounds per incident
 MAX_UNPROVEN = 2          # rounds without a proven cause before handing over to a human
 MAX_INVESTIGATIONS = 2    # times the reasoner may ask for more evidence per round
 MAX_REPAIRS = 4           # runs of one data-repair action per incident
+REPAIRS_PER_WATCH = 1     # data repairs per invariant while watching one fix, before damage counts as recurring
 MAX_REVISIONS = 1         # times per round the reasoner may revise hypotheses the evidence check rejected
 ESCALATE_KINDS = ("external_dependency", "bad_input")
 CAUSE_ACTIONS = {"rollback_service": ("bad_deploy", "config_change"),
@@ -240,6 +241,7 @@ class RaqibAgent:
             if why and v.proven:
                 v.proven = False
                 v.problems.append(f"refuted by experiment: {why}")
+        ledger.deploy_first([v for _, v in verdicts], set(self.refuted))
         ledger.explained_upstream([v for _, v in verdicts])
         return verdicts
 
@@ -247,6 +249,13 @@ class RaqibAgent:
         """The fix was an experiment. If the cause it removed was meant to explain symptoms that
         are still there, that (service, kind) is refuted for the rest of the incident."""
         current = {s.id for s in signals}
+        fixed_explain = set().union(*(self.explains.get(svc, set()) for svc, _ in self.last_fixed)) \
+            if self.last_fixed else set()
+        unexplained = current - fixed_explain
+        if self.last_fixed and unexplained:
+            self.history.append(f"t={self.env.now()}: after fixing {', '.join(s for s, _ in self.last_fixed)}, "
+                                f"{', '.join(sorted(unexplained))} remain and are not explained by that fix: "
+                                "look for another cause")
         for svc, kind in self.last_fixed:
             persisting = self.explains.get(svc, set()) & current
             if persisting:
@@ -351,6 +360,7 @@ class RaqibAgent:
     def _watch(self):
         """Watch the fix. Returns lasting symptoms that reopen the incident, or None once stable."""
         quiet, previous = 0, set()
+        repaired_here: dict[str, int] = {}       # invariant -> repairs during this watch
         while quiet < self.stable_for:
             self.env.wait(CHECK_EVERY)
             signals = self.monitor.check()
@@ -359,7 +369,16 @@ class RaqibAgent:
                 previous = set()
                 continue
             quiet = 0
-            repaired = self._repair_damage({s.id for s in signals if s.kind == "invariant"})
+            violated = {s.id for s in signals if s.kind == "invariant"}
+            # one more repair is fine (work already in flight when the cause was removed); damage
+            # that comes back after that means a cause is still active: reopen, do not mask it
+            recurring = {i for i in violated if repaired_here.get(i, 0) >= REPAIRS_PER_WATCH}
+            if recurring:
+                self._note("recurring_damage", invariants=sorted(recurring))
+                return signals
+            repaired = self._repair_damage(violated - recurring)
+            for i in repaired:
+                repaired_here[i] = repaired_here.get(i, 0) + 1
             rest = [s for s in signals if s.id not in repaired]
             ids = {s.id for s in rest}
             if ids & previous:                   # the same symptom on two checks in a row
