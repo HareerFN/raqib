@@ -450,6 +450,7 @@
     useEffect(() => {
       Promise.all([fetchJSON("data/library.json"), fetchJSON("data/scoreboard.json")])
         .then(([l, b]) => { setLib(l); setBoard(b); }).catch(e => setError(String(e)));
+      if (!["localhost", "127.0.0.1"].includes(location.hostname)) return;   // Live mode needs the local server
       const ctl = new AbortController(); setTimeout(() => ctl.abort(), 1500);
       fetch("/api/health", { signal: ctl.signal }).then(r => r.ok && r.json()).then(j => { if (j && j.live) setLiveOk(true); }).catch(() => {});
     }, []);
