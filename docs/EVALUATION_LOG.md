@@ -194,3 +194,21 @@ The agent is frozen at this commit. Seeds used from here (budget: about $1.6 of 
 - validation (10) and gen-validation (60): 1 seed, only if credit remains after the held-out run.
 - ablation (no Evidence Ledger): validation, 1 seed, only if credit remains.
 - llm_single_shot: not re-run; its earlier results are reported as they are.
+
+## 2026-10-31 · Final held-out run (`--final`, frozen agent `ade6762`, 3 seeds): in progress
+- First attempt (6 workers) was stopped after 15 of the 18 hand-written held-out runs because it
+  was too slow; nothing from it was reported. The restart (16 workers) replayed the cached
+  model answers, so its results are the same as one uninterrupted run.
+- Hand-written held-out (6 scenarios x 3 seeds), done:
+  | Agent | Success | Root cause | Recovered | Escalation | False recovery claims | Evidence valid |
+  |-------|---------|------------|-----------|------------|-----------------------|----------------|
+  | Null | 0% | 0% | 0% | 83.3% | 0 | - |
+  | Rule-based | 50.0% | 50.0% | 80.0% | 83.3% | 0 | - |
+  | Raqib | 38.9% | 38.9% | 53.3% | 61.1% | 0 | 100% (128) |
+  | Oracle | 100% | 100% | 100% | 100% | 0 | - |
+  Raqib is below the rule-based baseline on this small hand-written set.
+- gen-heldout (60 x 3): baselines done (Null 0%, Oracle 100%, Rule-based 16.7% with 37 false
+  recovery claims out of 180). Raqib stopped at 141 of 180 runs: the OpenRouter credit ran out
+  (HTTP 402). Completed model answers are cached; the run resumes from the cache once credit
+  is added, with no change to the agent.
+- Result files of the finished runs are kept in `reports/final/`.

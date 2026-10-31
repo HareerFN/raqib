@@ -1,0 +1,433 @@
+<title>Raqib Incident Replay</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: an incident flight recorder. Results strip on top, then a run picker beside a replayed evidence timeline, then the full benchmark table. */
+:root {
+  --paper: #f5f7fa;
+  --panel: #ffffff;
+  --ink: #17202e;
+  --muted: #5a6577;
+  --line: #d9dfe8;
+  --accent: #1f5fae;
+  --accent-soft: #e3ecf8;
+  --good: #1d7a4c;
+  --good-soft: #e1f2e8;
+  --bad: #b3361f;
+  --bad-soft: #f8e4df;
+  --warn: #9a6400;
+  --warn-soft: #f6ecd6;
+  --src-database: #6a4bb5;
+  --src-metrics: #1f7f8c;
+  --src-logs: #8a5a12;
+  --src-deploys: #2b5fb0;
+  --src-topology: #6b7380;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --step-0: 0.875rem;
+  --step-1: 1rem;
+  --step-2: 1.25rem;
+  --step-3: 1.75rem;
+  --step-4: 2.5rem;
+  --radius: 6px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --paper: #0f141c; --panel: #161d28; --ink: #e4e9f1; --muted: #98a3b5; --line: #2a3442;
+    --accent: #7fb0ec; --accent-soft: #1b2b42;
+    --good: #5fc690; --good-soft: #15301f; --bad: #f08a72; --bad-soft: #3a1d17; --warn: #e2b45a; --warn-soft: #33270f;
+    --src-database: #b29cf0; --src-metrics: #6ccbd6; --src-logs: #e0ac5a; --src-deploys: #85aef0; --src-topology: #9aa3b0;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #0f141c; --panel: #161d28; --ink: #e4e9f1; --muted: #98a3b5; --line: #2a3442;
+  --accent: #7fb0ec; --accent-soft: #1b2b42;
+  --good: #5fc690; --good-soft: #15301f; --bad: #f08a72; --bad-soft: #3a1d17; --warn: #e2b45a; --warn-soft: #33270f;
+  --src-database: #b29cf0; --src-metrics: #6ccbd6; --src-logs: #e0ac5a; --src-deploys: #85aef0; --src-topology: #9aa3b0;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--paper); color: var(--ink); font-family: var(--font-body); font-size: var(--step-0);
+  line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1240px; margin: 0 auto; padding-block: 28px 56px; display: grid; gap: 28px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; letter-spacing: 0.01em; }
+h1 { font-size: var(--step-4); font-weight: 700; line-height: 1.05; }
+h2 { font-size: var(--step-3); font-weight: 600; }
+h3 { font-size: var(--step-2); font-weight: 600; }
+.eyebrow { font-family: var(--font-mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
+.mono { font-family: var(--font-mono); }
+.num { font-variant-numeric: tabular-nums; }
+p { margin: 0; max-width: 68ch; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+header.top { display: grid; gap: 10px; }
+header.top .lead { font-size: var(--step-1); color: var(--muted); }
+header.top .lead strong { color: var(--ink); font-weight: 600; }
+
+.strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+.strip > div { padding: 16px 18px; display: grid; gap: 4px; border-left: 1px solid var(--line); }
+.strip > div:first-child { border-left: 0; }
+.strip .big { font-family: var(--font-display); font-size: var(--step-3); font-weight: 600; font-variant-numeric: tabular-nums; }
+.strip .vs { color: var(--muted); font-size: 0.8rem; }
+.strip .vs b { color: var(--ink); font-weight: 600; }
+
+.replay { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 20px; align-items: start; }
+.picker { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); display: grid; grid-template-rows: auto auto minmax(0, 1fr); max-height: 820px; }
+.picker .filters { padding: 14px; display: grid; gap: 10px; border-bottom: 1px solid var(--line); }
+.picker label { display: grid; gap: 4px; font-size: 0.75rem; color: var(--muted); }
+.picker select { font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; }
+.picker .count { padding: 8px 14px; color: var(--muted); font-size: 0.78rem; border-bottom: 1px solid var(--line); }
+.runs { overflow-y: auto; }
+.run { width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line); padding: 10px 14px; display: grid; gap: 6px; }
+.run:hover { background: var(--accent-soft); }
+.run[aria-pressed="true"] { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+.run .row1 { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.run .rid { font-family: var(--font-mono); font-size: 0.78rem; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip { font-family: var(--font-mono); font-size: 0.7rem; padding: 1px 6px; border-radius: 3px; background: var(--paper); border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.chip.hidden { color: var(--muted); font-style: italic; }
+
+.pill { font-family: var(--font-mono); font-size: 0.7rem; font-weight: 500; padding: 2px 7px; border-radius: 999px; white-space: nowrap; }
+.pill.good { background: var(--good-soft); color: var(--good); }
+.pill.bad { background: var(--bad-soft); color: var(--bad); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.neutral { background: var(--accent-soft); color: var(--accent); }
+
+.stage { display: grid; gap: 16px; min-width: 0; }
+.stagehead { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; display: grid; gap: 12px; }
+.stagehead .title { display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline; justify-content: space-between; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.btn { border: 1px solid var(--line); background: var(--paper); border-radius: 4px; padding: 6px 12px; font-weight: 500; }
+.btn.primary { background: var(--accent); color: var(--panel); border-color: var(--accent); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.progress { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; flex: 1 1 160px; }
+.progress > i { display: block; height: 100%; background: var(--accent); transition: width 0.25s ease; }
+
+.timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.ev { display: grid; grid-template-columns: 74px 22px minmax(0, 1fr); gap: 0 10px; }
+.ev .when { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); text-align: right; padding-top: 12px; font-variant-numeric: tabular-nums; }
+.ev .rail { position: relative; }
+.ev .rail::before { content: ""; position: absolute; left: 10px; top: 0; bottom: 0; width: 2px; background: var(--line); }
+.ev .rail i { position: absolute; left: 4px; top: 13px; width: 14px; height: 14px; border-radius: 50%; background: var(--panel); border: 2px solid var(--muted); }
+.ev.k-incident .rail i, .ev.k-reopened .rail i { border-color: var(--bad); background: var(--bad); }
+.ev.k-action .rail i { border-color: var(--accent); background: var(--accent); }
+.ev.k-stable .rail i { border-color: var(--good); background: var(--good); }
+.ev.k-escalated .rail i, .ev.k-refuted .rail i, .ev.k-ruled_out .rail i, .ev.k-revision .rail i { border-color: var(--warn); background: var(--warn); }
+.ev .body { padding: 8px 0 14px; display: grid; gap: 8px; min-width: 0; }
+.ev .label { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); }
+.ev .text { color: var(--muted); }
+.ev.enter { animation: rise 0.35s ease both; }
+@keyframes rise { from { transform: translateY(6px); opacity: 0.2; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .ev.enter { animation: none; } .progress > i { transition: none; } }
+
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; display: grid; gap: 8px; min-width: 0; }
+.hyp { display: grid; gap: 8px; }
+.hyp + .hyp { border-top: 1px dashed var(--line); padding-top: 10px; }
+.hyp .h1 { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.hyp .svc { font-family: var(--font-mono); font-weight: 500; }
+.problems { margin: 0; padding-left: 18px; color: var(--bad); }
+.evlist { display: grid; gap: 4px; }
+.evitem { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: 8px; align-items: baseline; font-size: 0.8rem; }
+.src { font-family: var(--font-mono); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500; }
+.src.database { color: var(--src-database); } .src.metrics { color: var(--src-metrics); } .src.logs { color: var(--src-logs); }
+.src.deploys { color: var(--src-deploys); } .src.topology { color: var(--src-topology); }
+.callid { font-family: var(--font-mono); font-size: 0.7rem; color: var(--accent); background: var(--accent-soft); padding: 0 5px; border-radius: 3px; }
+.evitem .claim { overflow-wrap: anywhere; }
+.code { font-family: var(--font-mono); font-size: 0.75rem; background: var(--paper); border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; overflow-x: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.verdict { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+.verdict > div { padding: 12px 14px; display: grid; gap: 6px; border-left: 1px solid var(--line); align-content: start; }
+.verdict > div:first-child { border-left: 0; }
+.kv { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; font-size: 0.8rem; }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+
+.tablewrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
+table { border-collapse: collapse; width: 100%; font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+th, td { padding: 8px 12px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
+thead th { font-family: var(--font-mono); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 500; }
+tr.raqib td { background: var(--accent-soft); font-weight: 600; }
+tr.sep td { border-top: 2px solid var(--line); }
+.foot { color: var(--muted); font-size: 0.78rem; display: grid; gap: 6px; }
+.section { display: grid; gap: 12px; }
+.section .sub { color: var(--muted); }
+
+@media (max-width: 900px) {
+  .replay { grid-template-columns: minmax(0, 1fr); }
+  .picker { max-height: 420px; }
+  .strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .strip > div:nth-child(3) { border-left: 0; }
+  .strip > div:nth-child(n+3) { border-top: 1px solid var(--line); }
+  .verdict { grid-template-columns: minmax(0, 1fr); }
+  .verdict > div { border-left: 0; border-top: 1px solid var(--line); }
+  .verdict > div:first-child { border-top: 0; }
+}
+@media (max-width: 480px) {
+  .ev { grid-template-columns: 52px 22px minmax(0, 1fr); gap: 0 6px; }
+  .evitem { grid-template-columns: auto minmax(0, 1fr); }
+  .evitem .src { grid-column: 1 / -1; }
+}
+</style>
+
+<div id="app"><div class="wrap"><header class="top"><span class="eyebrow">HUMAIN hackathon · Challenge 1</span><h1>Raqib</h1><p class="lead">Loading recorded incidents…</p></header></div></div>
+
+<script id="demo-data" type="application/json">__DEMO_DATA__</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/htm@3.1.1/dist/htm.umd.js"></script>
+<script>
+(function () {
+  const { useState, useEffect, useMemo, useRef } = React;
+  const html = htm.bind(React.createElement);
+  const DATA = JSON.parse(document.getElementById("demo-data").textContent);
+
+  const SPLIT_NAME = { "dev": "dev (hand-written)", "gen-dev": "gen-dev", "validation": "validation (hand-written)",
+    "gen-validation": "gen-validation", "heldout": "held-out (hand-written, sealed)", "gen-heldout": "gen-held-out (sealed)" };
+  const AGENT_NAME = { null: "Null (does nothing)", rule_based: "Rule-based runbooks", llm_single_shot: "LLM single shot",
+    raqib: "Raqib", raqib_no_ledger: "Raqib without Evidence Ledger", oracle: "Oracle (knows the answer)" };
+  const EVENT_NAME = { incident: "Incident detected", investigated: "Reasoner asked for more evidence", revision: "Evidence check rejected a hypothesis",
+    hypotheses: "Hypotheses checked by the Evidence Ledger", action: "Action", refused: "Action refused", approval_denied: "Approval denied",
+    refuted: "Fix refuted its own cause", ruled_out: "Cause ruled out", reopened: "Symptoms persisted: incident reopened",
+    stable: "Stable through the watch window", escalated: "Handed over to a human", report: "Final report" };
+
+  const pct = (a, b) => b ? Math.round(100 * a / b) : null;
+  const fmtPct = v => v == null ? "–" : `${Number(v).toFixed(1).replace(/\.0$/, "")}%`;
+
+  function pooled(splits, agent) {
+    const rows = DATA.summaries.filter(s => splits.includes(s.split) && s.agent === agent);
+    if (!rows.length) return null;
+    const runs = rows.reduce((a, r) => a + r.runs, 0);
+    const w = k => rows.reduce((a, r) => a + (r[k] == null ? 0 : r[k] * r.runs), 0) / runs;
+    return { runs, success: w("success_rate"), falseRec: rows.reduce((a, r) => a + (r.false_recovery_claims || 0), 0),
+      harm: rows.reduce((a, r) => a + r.harmful_actions, 0), cited: rows.reduce((a, r) => a + (r.evidence_cited || 0), 0),
+      validity: rows.find(r => r.evidence_validity != null) ? w("evidence_validity") : null, splits: rows.map(r => r.split) };
+  }
+
+  function Strip() {
+    const held = ["heldout", "gen-heldout"];
+    const haveHeld = DATA.summaries.some(s => held.includes(s.split) && s.agent === "raqib");
+    const splits = haveHeld ? held : ["gen-dev"];
+    const r = pooled(splits, "raqib"), b = pooled(splits, "rule_based");
+    if (!r) return null;
+    const scope = haveHeld ? "sealed held-out sets, 3 seeds" : "gen-dev";
+    return html`<section className="strip" aria-label="Key results">
+      <div><span className="eyebrow">Success, ${scope}</span><span className="big">${fmtPct(r.success)}</span>
+        <span className="vs">rule-based runbooks <b>${b ? fmtPct(b.success) : "–"}</b></span></div>
+      <div><span className="eyebrow">False recovery claims</span><span className="big">${r.falseRec} / ${r.runs}</span>
+        <span className="vs">rule-based <b>${b ? `${b.falseRec} / ${b.runs}` : "–"}</b></span></div>
+      <div><span className="eyebrow">Cited evidence that checks out</span><span className="big">${fmtPct(r.validity)}</span>
+        <span className="vs"><b>${r.cited}</b> citations checked against tool results</span></div>
+      <div><span className="eyebrow">Harmful actions</span><span className="big">${r.harm}</span>
+        <span className="vs">destructive steps blocked by the risk tiers</span></div>
+    </section>`;
+  }
+
+  function faultChip(f, reveal, i) {
+    if (!reveal) return html`<span className="chip hidden" key=${i}>fault ${i + 1} hidden</span>`;
+    return html`<span className="chip" key=${i}>${f.mechanism} @ ${f.service} · ${f.origin}</span>`;
+  }
+
+  function Outcome({ r }) {
+    if (r.success) return html`<span className="pill good">solved</span>`;
+    return html`<span className="pill bad">failed</span>`;
+  }
+
+  function Picker({ runs, selected, onSelect, reveal }) {
+    const [split, setSplit] = useState("all");
+    const [nf, setNf] = useState("all");
+    const [mech, setMech] = useState("all");
+    const [outcome, setOutcome] = useState("all");
+    const splits = [...new Set(runs.map(r => r.split))];
+    const mechs = [...new Set(runs.flatMap(r => r.faults.map(f => f.mechanism)))].sort();
+    const shown = runs.filter(r => (split === "all" || r.split === split)
+      && (nf === "all" || String(Math.min(r.faults.length, 3)) === nf)
+      && (mech === "all" || r.faults.some(f => f.mechanism === mech))
+      && (outcome === "all" || (outcome === "solved") === r.result.success));
+    return html`<aside className="picker" aria-label="Pick an incident">
+      <div className="filters">
+        <span className="eyebrow">Pick the faults</span>
+        <label htmlFor="f-split">Scenario set<select id="f-split" value=${split} onChange=${e => setSplit(e.target.value)}>
+          <option value="all">All sets</option>${splits.map(s => html`<option key=${s} value=${s}>${SPLIT_NAME[s] || s}</option>`)}</select></label>
+        <label htmlFor="f-mech">Fault mechanism<select id="f-mech" value=${mech} onChange=${e => setMech(e.target.value)}>
+          <option value="all">Any mechanism</option>${mechs.map(m => html`<option key=${m} value=${m}>${m}</option>`)}</select></label>
+        <label htmlFor="f-nf">Concurrent faults<select id="f-nf" value=${nf} onChange=${e => setNf(e.target.value)}>
+          <option value="all">Any number</option><option value="1">1 fault</option><option value="2">2 faults</option><option value="3">3 faults</option></select></label>
+        <label htmlFor="f-out">Outcome<select id="f-out" value=${outcome} onChange=${e => setOutcome(e.target.value)}>
+          <option value="all">Solved and failed</option><option value="solved">Solved</option><option value="failed">Failed</option></select></label>
+      </div>
+      <div className="count num">${shown.length} recorded incident${shown.length === 1 ? "" : "s"}</div>
+      <div className="runs">${shown.map(r => html`<button key=${r.split + r.id} className="run" aria-pressed=${selected === r}
+          onClick=${() => onSelect(r)}>
+        <span className="row1"><span className="rid">${r.id}</span><${Outcome} r=${r} /></span>
+        <span className="chips">${r.faults.map((f, i) => faultChip(f, reveal, i))}</span>
+      </button>`)}</div>
+    </aside>`;
+  }
+
+  function EvidenceList({ ids, evidence }) {
+    return html`<div className="evlist">${ids.map(id => {
+      const e = evidence[id];
+      if (!e) return null;
+      return html`<div className="evitem" key=${id}><span className="src ${e.source}">${e.source}</span>
+        ${e.call ? html`<span className="callid" title="Env tool call id this evidence was read from">${e.call}</span>` : html`<span></span>`}
+        <span className="claim">${e.claim}</span></div>`;
+    })}</div>`;
+  }
+
+  function EventBody({ e }) {
+    switch (e.event) {
+      case "incident": case "reopened":
+        return html`<div className="chips">${e.signals.map(s => html`<span className="chip" key=${s}>${s}</span>`)}</div>`;
+      case "investigated":
+        return html`<div className="card">${e.requests.map((q, i) => html`<div key=${i} className="code">${q.tool === "sql" ? q.query
+            : `logs ${q.service || "any service"}${q.level ? " · " + q.level : ""}${q.contains ? ` · "${q.contains}"` : ""}`}</div>`)}
+          ${e.requests[0] && e.requests[0].why ? html`<p className="text">Why: ${e.requests[0].why}</p>` : null}</div>`;
+      case "revision":
+        return html`<div className="card">${e.rejected.map((v, i) => html`<div className="hyp" key=${i}>
+          <div className="h1"><span className="svc">${v.service}</span><span className="pill warn">${v.kind}</span></div>
+          <ul className="problems">${v.problems.map((p, j) => html`<li key=${j}>${p}</li>`)}</ul></div>`)}
+          <p className="text">The reasons went back to the reasoner for one revision.</p></div>`;
+      case "hypotheses":
+        return html`<div className="card">${e.summary ? html`<p>${e.summary}</p>` : null}
+          ${e.verdicts.map((v, i) => html`<div className="hyp" key=${i}>
+            <div className="h1"><span className="svc">${v.service}</span><span className="pill neutral">${v.kind}</span>
+              ${v.proven ? html`<span className="pill good">proven · ${v.sources.length} sources</span>` : html`<span className="pill bad">rejected</span>`}</div>
+            ${v.mechanism ? html`<p className="text">${v.mechanism}</p>` : null}
+            ${v.problems.length ? html`<ul className="problems">${v.problems.map((p, j) => html`<li key=${j}>${p}</li>`)}</ul>` : null}
+            <${EvidenceList} ids=${v.supporting} evidence=${e.evidence} />
+            ${v.refuting.length ? html`<span className="eyebrow">Refuting</span><${EvidenceList} ids=${v.refuting} evidence=${e.evidence} />` : null}
+          </div>`)}</div>`;
+      case "action": {
+        const svc = e.params && e.params.service;
+        return html`<div className="chips"><span className="chip">${e.action}${svc ? " " + svc : ""}</span>
+          <span className="pill ${e.result && e.result.ok ? "good" : "bad"}">${e.result && e.result.ok ? "ok" : "failed"}</span></div>`;
+      }
+      case "refused":
+        return html`<p className="text"><span className="mono">${e.action}</span>: ${e.reason}</p>`;
+      case "refuted": case "ruled_out":
+        return html`<p className="text">${e.reason || `${e.service}: ${(e.persisting || []).join(", ")} persisted after its fix`}</p>`;
+      case "stable":
+        return html`<p className="text">Every invariant and metric check stayed clean for ${e.window} s.</p>`;
+      case "escalated":
+        return html`<p className="text">${e.reason}</p>`;
+      case "report":
+        return html`<div className="card"><dl className="kv">
+          <dt>Root causes</dt><dd className="mono">${e.root_causes.map(c => `${c.service} (${c.kind})`).join(", ") || "none proven"}</dd>
+          <dt>Cited evidence</dt><dd className="mono">${e.evidence.join(" ") || "–"}</dd>
+          <dt>Claim</dt><dd><span className="pill ${e.recovered ? "good" : "warn"}">recovered: ${String(e.recovered)}</span></dd></dl>
+          <p className="text">${e.reason}</p></div>`;
+      default:
+        return null;
+    }
+  }
+
+  function Verdict({ run }) {
+    const r = run.result, rb = run.rule_based;
+    const yes = (v, good = true) => html`<span className="pill ${v === good ? "good" : "bad"}">${v ? "yes" : "no"}</span>`;
+    return html`<section className="verdict" aria-label="Harness verdict">
+      <div><span className="eyebrow">What was injected</span>
+        <div className="chips">${run.faults.map((f, i) => faultChip(f, true, i))}</div>
+        <dl className="kv"><dt>True root cause</dt><dd className="mono">${run.truth.map(t => t.service).join(", ")}</dd>
+          <dt>Fixable from inside</dt><dd>${run.fixable ? "yes" : "no, escalate"}</dd></dl></div>
+      <div><span className="eyebrow">Harness verdict on Raqib</span><dl className="kv">
+        <dt>Detected</dt><dd>${r.detected ? `+${r.mttd} s` : "no"}</dd>
+        <dt>Root cause correct</dt><dd>${yes(r.root_cause_correct)}</dd>
+        <dt>${run.fixable ? "Recovered (300 s stability check)" : "Escalated"}</dt><dd>${run.fixable ? yes(!!r.recovered) : yes(r.escalated)}</dd>
+        <dt>Own claim matched the harness</dt><dd>${yes(!r.false_recovery_claim)}</dd>
+        <dt>Evidence that checks out</dt><dd>${r.evidence_valid} / ${r.evidence_cited}</dd>
+        <dt>Harmful actions</dt><dd>${r.harmful_actions}</dd>
+        <dt>LLM cost</dt><dd>$${r.cost_usd.toFixed(4)} · ${r.llm_calls} calls</dd></dl></div>
+      <div><span className="eyebrow">Rule-based runbooks, same run</span>${rb ? html`<dl className="kv">
+        <dt>Solved</dt><dd>${yes(rb.success)}</dd>
+        <dt>Diagnosis</dt><dd className="mono">${rb.diagnosis.map(d => d.service).join(", ") || "none"}</dd>
+        <dt>Claimed recovery</dt><dd>${rb.recovery_claim == null ? "–" : String(rb.recovery_claim)}</dd>
+        <dt>That claim was false</dt><dd>${yes(rb.false_recovery_claim, false)}</dd></dl>` : html`<p className="text">Not run on this set.</p>`}</div>
+    </section>`;
+  }
+
+  function Stage({ run }) {
+    const n = run.timeline.length;
+    const [shown, setShown] = useState(n);
+    const [playing, setPlaying] = useState(false);
+    const timer = useRef(null);
+    useEffect(() => { setShown(n); setPlaying(false); }, [run]);
+    useEffect(() => {
+      if (!playing) return;
+      if (shown >= n) { setPlaying(false); return; }
+      timer.current = setTimeout(() => setShown(s => s + 1), 900);
+      return () => clearTimeout(timer.current);
+    }, [playing, shown, n]);
+    const play = () => { if (shown >= n) setShown(0); setPlaying(true); };
+    const done = shown >= n;
+    return html`<div className="stage">
+      <div className="stagehead">
+        <div className="title"><div><span className="eyebrow">${SPLIT_NAME[run.split] || run.split} · seed ${run.seed}</span>
+          <h3 className="mono">${run.id}</h3></div><${Outcome} r=${run.result} /></div>
+        <p className="text">The agent sees only logs, metrics, the database, deploy history and the dependency graph. The injected faults are revealed after its final report.</p>
+        <div className="controls">
+          <button className="btn primary" id="btn-play" onClick=${playing ? () => setPlaying(false) : play}>${playing ? "Pause" : done ? "Replay incident" : "Continue"}</button>
+          <button className="btn" id="btn-step" disabled=${done} onClick=${() => { setPlaying(false); setShown(s => Math.min(n, s + 1)); }}>Step</button>
+          <button className="btn" id="btn-all" disabled=${done} onClick=${() => { setPlaying(false); setShown(n); }}>Show all</button>
+          <div className="progress" aria-hidden="true"><i style=${{ width: `${100 * shown / n}%` }}></i></div>
+          <span className="mono num">${shown} / ${n}</span>
+        </div>
+      </div>
+      <ol className="timeline">${run.timeline.slice(0, shown).map((e, i) => html`<li key=${i} className="ev k-${e.event} ${playing ? "enter" : ""}">
+        <span className="when">+${Math.max(0, e.t - run.onset)} s</span><span className="rail"><i></i></span>
+        <div className="body"><span className="label">${EVENT_NAME[e.event] || e.event}</span><${EventBody} e=${e} /></div></li>`)}</ol>
+      ${done ? html`<${Verdict} run=${run} />` : null}
+    </div>`;
+  }
+
+  function Benchmark() {
+    const order = ["dev", "gen-dev", "validation", "gen-validation", "heldout", "gen-heldout"];
+    const rows = [...DATA.summaries].sort((a, b) => order.indexOf(a.split) - order.indexOf(b.split));
+    let last = null;
+    return html`<section className="section"><div><h2>Benchmark</h2>
+      <p className="sub">Every agent shares the same Monitoring Engine, so the differences come from diagnosis and repair. Raqib was built and tuned on dev only; the held-out sets were sealed by SHA-256 before it existed and run once with --final.</p></div>
+      <div className="tablewrap"><table><thead><tr><th>Scenario set</th><th>Agent</th><th>Runs</th><th>Seeds</th><th>Success</th><th>Root cause</th>
+        <th>Recovered</th><th>Escalation</th><th>False recovery claims</th><th>Evidence valid</th><th>Harm</th><th>Cost</th></tr></thead>
+      <tbody>${rows.map((s, i) => { const sep = last !== null && last !== s.split; last = s.split;
+        return html`<tr key=${i} className="${s.agent === "raqib" ? "raqib" : ""} ${sep ? "sep" : ""}">
+        <td>${SPLIT_NAME[s.split] || s.split}</td><td>${AGENT_NAME[s.agent] || s.agent}</td><td>${s.runs}</td><td>${s.seeds.join(" ")}</td>
+        <td>${fmtPct(s.success_rate)}</td><td>${fmtPct(s.root_cause_accuracy)}</td><td>${fmtPct(s.recovery_rate)}</td>
+        <td>${fmtPct(s.escalation_accuracy)}</td><td>${s.false_recovery_claims == null ? "–" : s.false_recovery_claims}</td>
+        <td>${s.evidence_cited ? fmtPct(s.evidence_validity) : "–"}</td><td>${s.harmful_actions}</td><td>$${(s.cost_usd || 0).toFixed(2)}</td></tr>`; })}
+      </tbody></table></div>
+      <div className="foot"><p>Success means detected after the hidden onset, every root cause right (service and kind), no harmful action, the right call on escalation, and for fixable cases a 300 s stability check passed after the agent stopped.</p>
+        <p>False recovery claim: the agent said "recovered" and the harness found the system still broken. Evidence valid: share of cited items whose tool-call id exists and whose result contains the claimed values.</p></div>
+    </section>`;
+  }
+
+  function App() {
+    const runs = DATA.runs;
+    const first = runs.find(r => r.result.success && r.timeline.some(e => e.event === "revision")) || runs[0];
+    const [sel, setSel] = useState(first);
+    return html`<div className="wrap">
+      <header className="top"><span className="eyebrow">HUMAIN hackathon · Challenge 1 · Agentic recovery of a failing system</span>
+        <h1>Raqib</h1>
+        <p className="lead"><strong>It never fixes on a guess.</strong> Raqib detects a failure, gathers evidence from logs, metrics, the database, deploy history and the dependency graph, proves the cause with at least two independent sources, applies the least risky fix, and proves with numbers that the system recovered.</p>
+      </header>
+      <${Strip} />
+      <section className="section"><div><h2>Incident replay</h2>
+        <p className="sub">Choose faults on the left. Each entry is a recorded benchmark run: the timeline is the agent's own decision log, and every evidence id points to a real tool call.</p></div>
+        <div className="replay"><${Picker} runs=${runs} selected=${sel} onSelect=${setSel} reveal=${false} />
+          ${sel ? html`<${Stage} run=${sel} />` : html`<p>No recorded runs.</p>`}</div>
+      </section>
+      <${Benchmark} />
+    </div>`;
+  }
+
+  ReactDOM.createRoot(document.getElementById("app")).render(html`<${App} />`);
+})();
+</script>
