@@ -1,0 +1,194 @@
+[
+ {
+  "file": "runs/gen_heldout_v2_400012_s2.json",
+  "id": "gen_heldout_v2_400012",
+  "split": "gen-heldout-v2",
+  "seed": 2,
+  "success": true,
+  "faults": 1
+ },
+ {
+  "file": "runs/gen_heldout_v2_400043_s3.json",
+  "id": "gen_heldout_v2_400043",
+  "split": "gen-heldout-v2",
+  "seed": 3,
+  "success": true,
+  "faults": 3
+ },
+ {
+  "file": "runs/gen_heldout_v2_400008_s3.json",
+  "id": "gen_heldout_v2_400008",
+  "split": "gen-heldout-v2",
+  "seed": 3,
+  "success": true,
+  "faults": 1
+ },
+ {
+  "file": "runs/gen_heldout_v2_400046_s3.json",
+  "id": "gen_heldout_v2_400046",
+  "split": "gen-heldout-v2",
+  "seed": 3,
+  "success": true,
+  "faults": 1
+ },
+ {
+  "file": "runs/gen_heldout_v2_400031_s3.json",
+  "id": "gen_heldout_v2_400031",
+  "split": "gen-heldout-v2",
+  "seed": 3,
+  "success": true,
+  "faults": 2
+ },
+ {
+  "file": "runs/gen_heldout_v2_400028_s2.json",
+  "id": "gen_heldout_v2_400028",
+  "split": "gen-heldout-v2",
+  "seed": 2,
+  "success": true,
+  "faults": 1
+ },
+ {
+  "file": "runs/gen_heldout_v2_400020_s3.json",
+  "id": "gen_heldout_v2_400020",
+  "split": "gen-heldout-v2",
+  "seed": 3,
+  "success": true,
+  "faults": 1
+ },
+ {
+  "file": "runs/gen_heldout_v2_400025_s3.json",
+  "id": "gen_heldout_v2_400025",
+  "split": "gen-heldout-v2",
+  "seed": 3,
+  "success": true,
+  "faults": 2
+ },
+ {
+  "file": "runs/gen_heldout_v2_400029_s3.json",
+  "id": "gen_heldout_v2_400029",
+  "split": "gen-heldout-v2",
+  "seed": 3,
+  "success": false,
+  "faults": 1
+ },
+ {
+  "file": "runs/gen_heldout_v2_400034_s2.json",
+  "id": "gen_heldout_v2_400034",
+  "split": "gen-heldout-v2",
+  "seed": 2,
+  "success": false,
+  "faults": 2
+ },
+ {
+  "file": "runs/gen_heldout_v2_400023_s3.json",
+  "id": "gen_heldout_v2_400023",
+  "split": "gen-heldout-v2",
+  "seed": 3,
+  "success": false,
+  "faults": 3
+ },
+ {
+  "file": "runs/gen_heldout_v2_400018_s3.json",
+  "id": "gen_heldout_v2_400018",
+  "split": "gen-heldout-v2",
+  "seed": 3,
+  "success": false,
+  "faults": 1
+ },
+ {
+  "file": "runs/gen_heldout_v2_400015_s2.json",
+  "id": "gen_heldout_v2_400015",
+  "split": "gen-heldout-v2",
+  "seed": 2,
+  "success": false,
+  "faults": 1
+ },
+ {
+  "file": "runs/gen_heldout_v2_400041_s1.json",
+  "id": "gen_heldout_v2_400041",
+  "split": "gen-heldout-v2",
+  "seed": 1,
+  "success": false,
+  "faults": 2
+ },
+ {
+  "file": "runs/gen_heldout_v2_400051_s3.json",
+  "id": "gen_heldout_v2_400051",
+  "split": "gen-heldout-v2",
+  "seed": 3,
+  "success": false,
+  "faults": 2
+ },
+ {
+  "file": "runs/gen_heldout_v2_400049_s3.json",
+  "id": "gen_heldout_v2_400049",
+  "split": "gen-heldout-v2",
+  "seed": 3,
+  "success": false,
+  "faults": 1
+ },
+ {
+  "file": "runs/gen_validation_200056_s1.json",
+  "id": "gen_validation_200056",
+  "split": "gen-validation",
+  "seed": 1,
+  "success": true,
+  "faults": 2
+ },
+ {
+  "file": "runs/gen_validation_200033_s1.json",
+  "id": "gen_validation_200033",
+  "split": "gen-validation",
+  "seed": 1,
+  "success": true,
+  "faults": 1
+ },
+ {
+  "file": "runs/gen_validation_200041_s1.json",
+  "id": "gen_validation_200041",
+  "split": "gen-validation",
+  "seed": 1,
+  "success": true,
+  "faults": 1
+ },
+ {
+  "file": "runs/gen_validation_200052_s1.json",
+  "id": "gen_validation_200052",
+  "split": "gen-validation",
+  "seed": 1,
+  "success": true,
+  "faults": 1
+ },
+ {
+  "file": "runs/gen_validation_200009_s1.json",
+  "id": "gen_validation_200009",
+  "split": "gen-validation",
+  "seed": 1,
+  "success": false,
+  "faults": 1
+ },
+ {
+  "file": "runs/gen_validation_200054_s1.json",
+  "id": "gen_validation_200054",
+  "split": "gen-validation",
+  "seed": 1,
+  "success": false,
+  "faults": 2
+ },
+ {
+  "file": "runs/gen_validation_200034_s1.json",
+  "id": "gen_validation_200034",
+  "split": "gen-validation",
+  "seed": 1,
+  "success": false,
+  "faults": 2
+ },
+ {
+  "file": "runs/gen_validation_200039_s1.json",
+  "id": "gen_validation_200039",
+  "split": "gen-validation",
+  "seed": 1,
+  "success": false,
+  "faults": 2
+ }
+]

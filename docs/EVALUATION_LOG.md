@@ -280,3 +280,30 @@ gen-validation, seed 1 (also used in the failure analysis above, so it is not a 
 | v2 | 63.3% | 80% | 41% | 33% | 30% | 3 | $0.19 |
 The improvement is clear, so v2 is frozen at this commit and run once on gen_heldout_v2
 (`--final`, 3 seeds), with rule-based, Null and Oracle on the same set.
+
+## 2026-10-31 · Agent v2 on the sealed gen_heldout_v2 (`--final`, 3 seeds, run once)
+- Frozen v2 = commit `e4ed01a`. During the run, OpenRouter sent a truncated reply and the
+  client crashed (55 of 180 runs were printed). Commit `50e3b52` widened the client's retries
+  (transport only: no prompt, cache key or decision changed) and the same command was resumed;
+  finished runs replayed from the cache, so the result equals one uninterrupted run.
+
+| Agent | gen_heldout_v2 (60 x 3) | Per seed | False recovery claims | Evidence valid |
+|-------|-------------------------|----------|-----------------------|----------------|
+| Null | 0% | | 0 | - |
+| Rule-based | 16.7% | 16.7 / 16.7 / 16.7 | 37 / 180 | - |
+| **Raqib v2** | **32.2%** | 35.0 / 31.7 / 30.0 (sd 2.1) | **0 / 180** (1 false failure claim) | 100% (1,713) |
+| Oracle | 100% | | 0 | - |
+
+By group (rule-based / v2): 1 fault 28.6 / 45.7%, 2 faults 0 / 15.8%, 3 faults 0 / 5.6%,
+unfixable (must escalate) 0 / 48.1%, invoice_format_change 0 / 60.0%, duplicate_charge
+37.5 / 50.0%, capacity_config 45.5 / 51.5%, clock_skew 8.3 / 33.3%, invoice_swap@sync-job
+11.1 / 25.9%, conn_leak 0 / 6.7%, disk_fill 0 / 4.5%. Cost $0.56 for 180 runs.
+
+Reading it plainly:
+- v2 is clearly better than runbooks on failures it never saw, and better on escalation.
+- The gain on gen-validation (38.3% -> 63.3%) mostly did not carry over: gen_heldout_v2 is a
+  different scenario set, so it cannot be compared one-to-one with v1's 28.9% on gen-heldout,
+  but 32.2% is far below 63.3%. gen-validation's failures were used in the v2 analysis, so part
+  of that gain was fitting to it. The held-out number is the one to trust.
+- Resource leaks and the full disk remain the weak spot (33 database restarts, all the same
+  symptom-vs-cause confusion found in v1).

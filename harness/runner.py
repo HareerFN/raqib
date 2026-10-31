@@ -74,7 +74,10 @@ def _schedule(scenario: dict, onset: int):
     return fire
 
 
-def run_one(scenario: dict, split: str, agent_factory, seed: int, budget: int = 1500) -> RunResult:
+def run_one(scenario: dict, split: str, agent_factory, seed: int, budget: int = 1500, hooks=None) -> RunResult:
+    """hooks (optional, for the demo recorder): an object with on_start(system, env, onset),
+    on_step(system) called every simulated second, on_end(env, agent), and optionally
+    approver(action) -> bool replacing the simulated reviewer. Without hooks nothing changes."""
     truth = scenario["truth"]
     system = TargetSystem(seed=seed)
     system.run(WARMUP)
@@ -82,8 +85,19 @@ def run_one(scenario: dict, split: str, agent_factory, seed: int, budget: int = 
     rng = random.Random(seed * 1_000_003 + zlib.crc32(scenario["id"].encode()))
     onset = system.clock.now + rng.randint(120, 240)
     scheduler = _schedule(scenario, onset)
+    if hooks is not None:
+        fire = scheduler
+
+        def scheduler(system):  # noqa: F811 (same events, plus an observer)
+            fire(system)
+            hooks.on_step(system)
     needs_approval = set(truth.get("needs_approval", []))
-    env = Env(system, scheduler, budget, approver=lambda action: action in needs_approval)
+    approver = lambda action: action in needs_approval  # noqa: E731
+    if hooks is not None and getattr(hooks, "approver", None):
+        approver = hooks.approver
+    env = Env(system, scheduler, budget, approver=approver)
+    if hooks is not None:
+        hooks.on_start(system, env, onset)
 
     agent = agent_factory(scenario=scenario, onset=onset)
     try:
@@ -100,6 +114,8 @@ def run_one(scenario: dict, split: str, agent_factory, seed: int, budget: int = 
             samples.append(([r.id for r in RULES.violations(system.db, system.clock.now)],
                             system.metrics.gauges.get("queue_depth", 0)))
 
+    if hooks is not None:
+        hooks.on_end(env, agent)
     res = RunResult(scenario=scenario["id"], split=split, family=scenario["family"], seed=seed,
                     agent=getattr(agent, "name", type(agent).__name__), onset=onset, fixable=truth["fixable"])
     res.cost_usd = round(getattr(agent, "cost_usd", 0.0), 5)

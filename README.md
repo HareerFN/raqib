@@ -10,7 +10,20 @@ from two independent sources is acted on.
 
 ## Results
 
-**Final evaluation on the sealed held-out sets** (frozen agent, `--final`, 3 seeds, run once):
+**Agent v2 on `gen_heldout_v2`** (60 new incidents from held-out mechanisms, sealed before v2
+was written; `--final`, 3 seeds, run once):
+
+| Agent | Success | Per seed | 2+ concurrent faults | Must escalate | False recovery claims |
+|-------|---------|----------|----------------------|---------------|-----------------------|
+| Rule-based runbooks | 16.7% | 16.7 / 16.7 / 16.7 | 0% | 0% | 37 / 180 |
+| **Raqib v2** | **32.2%** | 35.0 / 31.7 / 30.0 | 13.3% | 48.1% | **0 / 180** |
+
+v2 fixed two general failure causes found on dev/validation only (data repairs that hid a
+still-active cause; restarting a service whose deploy preceded the symptoms). It scored 63.3%
+on gen-validation, but that set's failures were part of the analysis; the sealed set says
+32.2%, and that is the number to trust. Details in `docs/EVALUATION_LOG.md`.
+
+**Agent v1** on the first sealed held-out sets (frozen agent, `--final`, 3 seeds, run once):
 
 | Agent | gen-heldout (60 x 3) | hand-written held-out (6 x 3) | False recovery claims (both sets) | Evidence valid |
 |-------|----------------------|-------------------------------|-----------------------------------|----------------|
@@ -127,12 +140,29 @@ Sealed sets need `--final`:
 
     python run_benchmark.py --split gen-heldout --agent raqib --seeds 1 2 3 --final
 
-## Demo
+## Demo: the control room
 
-`demo/raqib_demo.html` (open it in a browser; also published at https://claude.ai/artifact/S8SqGjY19dosRGLRZjiBYH) replays recorded incidents: pick faults, step
-through the agent's evidence timeline (every evidence item shows the tool-call id it came
-from), then see the injected faults and the harness verdict next to the rule-based result.
-Rebuild it from new results with `python demo/export.py && python demo/build.py`.
+**Replay (no install):** https://hareerfn.github.io/raqib/ . Break the system, pick a hidden
+fault card (or "Surprise me"), watch the business rules turn red while the logs stay quiet,
+then wake Raqib and step through its investigation: every evidence card shows the tool-call id
+it came from and opens the original result; hypotheses with supporting and refuting evidence;
+the Evidence Ledger gate; the discriminating tests; the risk ladder (high-risk actions ask you
+to approve). Then verify, reveal the hidden fault, compare with the rule-based runbooks on the
+same incident, and finish on the scoreboard. Every replay is a real benchmark run of the
+frozen agent, re-recorded from the committed model cache (`demo/record_library.py` refuses
+any run whose outcome differs from the result file or that needs a new model call).
+
+**Live (local, for the video):** runs the agent for real on a brand-new incident.
+
+    pip install fastapi uvicorn
+    python demo/server.py                 # open http://127.0.0.1:8000 and switch to Live
+
+Live cards are new scenarios composed from the held-out fault mechanisms with fresh seeds
+(never a benchmark file) and kept only if they pass the generator's quality filters. When
+Raqib asks to run a high-risk action, you approve or deny it on the page.
+
+Rebuild the replay data: `python demo/record_library.py && python demo/build_site.py`.
+The older single-page replay is still in `demo/raqib_demo.html`.
 
 ## Layout
 
@@ -142,7 +172,8 @@ Rebuild it from new results with `python demo/export.py && python demo/build.py`
     harness/     Env (the only thing agents see), runner and scoring, citations, generator, reference agents
     raqib/       the repair agent: monitor, evidence, ledger, reasoner, agent
     baselines/   rule-based runbooks, LLM single shot
-    demo/        recorded-incident replay page
+    demo/        recorder, live server, replay data builder
+    site/        the control-room demo (GitHub Pages)
     reports/     result files of the final runs
     docs/        EVALUATION_LOG.md: every change to scenarios, scoring or the agent, with its reason
 
