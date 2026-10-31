@@ -313,3 +313,11 @@ Commit messages were edited (a co-author trailer removed, one title renamed) and
 working note was removed from history. File contents, commit order and dates are unchanged,
 so every "committed before" claim still holds; commit ids changed, and the ids quoted in this
 log and in SEALED.md were updated to the new ones.
+
+## 2026-10-31 · Live control room
+`demo/server.py` runs the simulated system in real time and the real agent on it, for the demo.
+One addition to the agent for this: an optional `watch_start` (when the agent came on duty).
+In the benchmark the agent is always on watch before the fault, so its healthy baseline is the
+300 s before it starts; in the live demo the viewer may start it after the symptoms, so the
+server passes the session start as `watch_start`. It does not reveal when the fault was
+injected, the default is unchanged, and no benchmark number depends on it.

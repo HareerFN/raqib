@@ -47,8 +47,9 @@ class RaqibAgent:
     """The flags exist for ablations; the full agent uses the defaults."""
 
     def __init__(self, llm=None, gate: bool = True, discriminate: bool = True, use_topology: bool = True,
-                 use_invariants: bool = True, name: str = "raqib", **_):
+                 use_invariants: bool = True, name: str = "raqib", watch_start: int | None = None, **_):
         self.name = name
+        self.on_watch_since = watch_start   # when the agent came on duty (default: when run() starts)
         self.llm = llm or LLMClient("strong")
         self.reasoner = Reasoner(self.llm, use_topology=use_topology)
         self.gate, self.discriminate = gate, discriminate
@@ -67,7 +68,7 @@ class RaqibAgent:
     # ================================================================ main loop
     def run(self, env):
         self.env = env
-        self.watch_start = env.now()
+        self.watch_start = env.now() if self.on_watch_since is None else self.on_watch_since
         self.monitor = Monitor(env, use_invariants=self.use_invariants)
         self.collector = Collector(env, self.watch_start, use_topology=self.use_topology,
                                    use_invariants=self.use_invariants)

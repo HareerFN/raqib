@@ -61,15 +61,17 @@ class Recorder:
     def _sample(self, system):
         now = system.clock.now
         logs: dict[str, list[int]] = {}
+        tail = []
         for r in system.log.records[self.log_at:]:
             if r["service"] in ("ops", "deployer"):
                 continue
             c = logs.setdefault(r["service"], [0, 0, 0])
             c[{"INFO": 0, "WARN": 1, "ERROR": 2}.get(r["level"], 0)] += 1
+            tail.append({"ts": r["ts"], "service": r["service"], "level": r["level"], "event": r["event"]})
         self.log_at = len(system.log.records)
         inv = {r.id: r.violations for r in RULES.check(system.db, now)}
         g = system.metrics.gauges
-        self.samples.append({"t": now, "inv": inv, "logs": logs,
+        self.samples.append({"t": now, "inv": inv, "logs": logs, "tail": tail[-6:],
                              "queue": g.get("queue_depth", 0), "pool": system.db_pool_in_use,
                              "orders": system.metrics.counters.get("orders_created", 0),
                              "done": system.metrics.counters.get("orders_fulfilled", 0)})

@@ -142,27 +142,26 @@ Sealed sets need `--final`:
 
 ## Demo: the control room
 
-**Replay (no install):** https://hareerfn.github.io/raqib/ . Break the system, pick a hidden
-fault card (or "Surprise me"), watch the business rules turn red while the logs stay quiet,
-then wake Raqib and step through its investigation: every evidence card shows the tool-call id
-it came from and opens the original result; hypotheses with supporting and refuting evidence;
-the Evidence Ledger gate; the discriminating tests; the risk ladder (high-risk actions ask you
-to approve). Then verify, reveal the hidden fault, compare with the rule-based runbooks on the
-same incident, and finish on the scoreboard. Every replay is a real benchmark run of the
-frozen agent, re-recorded from the committed model cache (`demo/record_library.py` refuses
-any run whose outcome differs from the result file or that needs a new model call).
-
-**Live (local, for the video):** runs the agent for real on a brand-new incident.
+**Live, on your machine (for the video):**
 
     pip install fastapi uvicorn
-    python demo/server.py                 # open http://127.0.0.1:8000 and switch to Live
+    python demo/server.py          # opens http://127.0.0.1:8000
 
-Live cards are new scenarios composed from the held-out fault mechanisms with fresh seeds
-(never a benchmark file) and kept only if they pass the generator's quality filters. When
-Raqib asks to run a high-risk action, you approve or deny it on the page.
+The simulated system runs in real time: the service map, order counters and the seven business
+rules move as it runs. Pick a fault (mechanism, service, origin; up to three at once) and press
+Inject, or press Surprise me for a new hidden incident from the benchmark generator. Watch the
+rules turn red while the logs show no ERROR line, then press Run Raqib: the real agent runs
+(model calls via OpenRouter, key in `.env`) and every decision appears as it happens, grouped by
+round: the evidence it cites (each line opens the original tool result), its hypotheses with the
+Evidence Ledger verdict and the discriminating checks, and the actions with their risk tier.
+High-risk actions wait for you to approve or deny. When it is done, Reveal the truth compares the
+injected faults with its diagnosis, and What would rules do? runs the rule-based runbooks on the
+same incident. The speed control (1x to 30x) sets how many simulated seconds pass per second.
 
-Rebuild the replay data: `python demo/record_library.py && python demo/build_site.py`.
-The older single-page replay is still in `demo/raqib_demo.html`.
+**Recorded, no install:** https://hareerfn.github.io/raqib/ shows the same screen playing back
+24 recorded real runs of the frozen agent (solved and failed), plus a Benchmark tab. Every
+recording was re-run from the committed model cache and checked identical to the benchmark
+result (`demo/record_library.py`). Rebuild with `python demo/record_library.py && python demo/build_site.py`.
 
 ## Layout
 
@@ -172,8 +171,8 @@ The older single-page replay is still in `demo/raqib_demo.html`.
     harness/     Env (the only thing agents see), runner and scoring, citations, generator, reference agents
     raqib/       the repair agent: monitor, evidence, ledger, reasoner, agent
     baselines/   rule-based runbooks, LLM single shot
-    demo/        recorder, live server, replay data builder
-    site/        the control-room demo (GitHub Pages)
+    demo/        live server and session, run recorder, site data builder
+    site/        the control-room page (live locally, recorded on GitHub Pages)
     reports/     result files of the final runs
     docs/        EVALUATION_LOG.md: every change to scenarios, scoring or the agent, with its reason
 
